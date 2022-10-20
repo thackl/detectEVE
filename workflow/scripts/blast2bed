@@ -1,0 +1,58 @@
+#!/usr/bin/env perl
+# Created: 03 Aug 2018
+# Author: Thomas Hackl, thackl@lim4.de
+use warnings;
+use strict;
+use Getopt::Long  qw(:config no_ignore_case bundling);
+use Data::Dumper;
+
+my $argv = join(" ", @ARGV);
+GetOptions (
+    "query|q!" => \(my $query_mode),
+    "all|a!" => => \(my $all),
+    "out|o=s" => \(my $out),
+    "help|h!" => \(my $help),
+    "debug|D!" => \(my $debug),
+) or die("Error in command line arguments\n");
+
+if ($help || @ARGV > 2){
+    print "Usage: blast2bed < in > out\n";
+    printf " %-19s  %s\n", "-q/--query", "relative to query, not subject [OFF]";
+    printf " %-19s  %s\n", "-a/--all", "add extra fields after 6 default bed columns [OFF]";
+    printf " %-19s  %s\n", "-o/--out", "write to this file [STDOUT]";
+    printf " %-19s  %s\n", "-h/--help", "show this help";
+    printf " %-19s  %s\n", "-D/--debug", "show debug messages";
+    exit 0;
+}
+
+my $sort = "sort -k1,1 -k2,2n -k3,3";
+$sort.=" > $out" if defined($out);
+open(my $ofh, "|-", $sort) or die $!;
+
+# converting blast to bed: blast is weird, and reports hits relative to query
+# strand. Need to look at ref to determine strand.
+# outfmt 6/7: qaccver saccver pident length mismatch gapopen qstart qend sstart send evalue bitscore
+my @i = $query_mode ? (0,6,7,1,11) : (1,8,9,0,11);
+my @a = $all ? ($query_mode ? (2,3,4,5,8,9,10) : (2,3,4,5,6,7,10)) : ();
+
+print $ofh "# $0 $argv\n";
+my $s;
+my @r;
+while (<>) {
+    next if /^#/;
+    chomp($_);
+    @r = split("\t", $_);
+    if($r[8]>$r[9]){ # make coords relative to ref strand
+        $s = "-";
+        @r[8,9] = @r[9,8];
+    }elsif($r[6]>$r[7]){ # make coords relative to ref strand
+        $s = "-";
+        @r[6,7] = @r[7,6];
+    }else{
+        $s = "+"
+    }
+    $r[6]--; # 0-offset
+    $r[8]--;
+
+    print $ofh join("\t",@r[@i], $s, @r[@a]),"\n";
+}

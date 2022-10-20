@@ -1,0 +1,50 @@
+# relative to workflow dir
+configfile: "config/config.yaml"
+
+#ASM, = glob_wildcards('assemblies/{asm}.fna')
+#ASM.sort()
+
+## loci ----------------------------------------------------------------------##
+# rule download_assemblies:
+
+rule search_assemblies:
+    input: "results/{asm}.fna"
+    output: "results/{asm}-search.o6"
+    threads: 12
+    shell:
+        "workflow/scripts/diamond-chopped.sh blastx "
+        "--query {input} --out {output} --threads {threads} "
+        "--db {config[search][db]} --evalue {config[search][evalue]} "
+        "-W {config[search][chop_window]} -S {config[search][chop_step]} "
+        "{config[search][other_args]}\n"
+        "perl -i.bak 'print if $F[3] > {config[search][min_length_aa]}' {output}"
+        
+rule extract_putatEVEs:
+    input:
+        fna="results/{asm}.fna",
+        o6="results/{asm}-search.o6"
+    output: "results/{asm}-putatEVEs.fna"
+    shell:
+        "workflow/scripts/blast2bed -q | seqkit subseq --bed /dev/fd/0 {input.fna} > {output}"
+
+rule retrosearch_putatEVEs:
+    input: "results/{asm}-putatEVEs.fna" 
+    output: "results/{asm}-retro.o6"
+    threads: 12
+    shell:
+        "diamond blastx --query {input} --out {output} --threads {threads} "
+        "--db {config[retrosearch][db]} --evalue {config[retrosearch][evalue]} "
+        "{config[retrosearch][other_args]} "
+
+# rule validate_putatEVEs:
+        
+# rule extract_validatEVEs:
+#     input:
+#         fna=asm_dir + "{asm}.fna",
+#         o6=res_dir + "{asm}-??"
+#     output: res_dir + "{asm}-putatEVEs.fna" 
+#     shell:
+#         "perl -ane 'print if $F[3] > 83' {input.o6} | " +
+#         scr_dir + "blast2bed -q | " +
+#         "seqkit subseq --bed /dev/fd/0 {input.fna} > {output}"
+    

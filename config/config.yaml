@@ -1,0 +1,14 @@
+search:
+  db: "resources/VDB/VDB.dmnd"
+  evalue: 1e-4
+  min_length_aa: 83
+  # expert
+  chop_window: 60000
+  chop_step: 50000
+  other_args: "--sensitive -F 15 --range-culling --masking seg -k 1 --outfmt 6"
+
+retrosearch:
+  db: "resources/uniref50.dmnd"
+  evalue: 1e-4
+  # expert
+  other_args: "--outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle staxids sscinames sskingdoms skingdoms sphylums"
