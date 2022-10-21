@@ -1,0 +1,51 @@
+** Install & Setup
+
+#+begin_src sh
+workflow=omx-discover-eves
+git clone https://github.com/thackl/$workflow
+cd $workflow
+mamba create -n $workflow;          
+mamba env update -n $workflow --file workflow/envs/env.yaml
+mamba activate $workflow
+
+# download uniref50 for retroblast
+snakemake resources/uniref50.dmnd
+
+#+end_src
+
+** Run
+Place an =ASM.fna= in =results/=. Run snakemake requesting the validatEVE
+sequences for the given assembly prefix. Produces:
+- =ASM-validatEVEs.tsv= :: best hit of the EVE with evidence and confidence
+  annotation (exogenous virus: high, eve-ish description & hypothetical protein:
+  low)
+- =ASM-validatEVEs.pdf= :: graphical overview of hit distribution for validatEVEs
+- =ASM-validatEVEs.fna= :: validatEVEs nucleotide sequences
+
+#+begin_src sh
+snakemake results/QMGA01-validatEVEs.fna
+#+end_src
+
+** Changes (compared to legacy)
+- =diamond blastx= instead of =tblastn=
+
+- =diamond= is used in frameshift mode to can extend hits across frameshifts;
+  dropped merging of abutting =tblastn= hits from orig pipeline
+
+- need to chop long contigs for diamond or else I lose hits (50k + 10k overlap
+  windows). Creates possibility of redundant hits right at window edge (could be
+  filtered?)
+
+- uniref50 instead of NR for retroblast (faster, less redundant)
+
+- retroblast: --top 20 (top hits within 20% top score, rather than strict -k 10 top hits)
+
+- min_length: 83 amino-acids (250 bp in tblastn)
+
+** Questions & Notes
+- lots of putatEVEs are low-complexity repeats - meaningful?
+
+- currently I'm not filtering out retroviral hits - but we probably should?
+
+- are validatEVEs just subset of putatEVEs or somehow extracted based on
+  retroblast results?
