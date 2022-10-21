@@ -4,7 +4,48 @@ configfile: "config/config.yaml"
 #ASM, = glob_wildcards('assemblies/{asm}.fna')
 #ASM.sort()
 
-## loci ----------------------------------------------------------------------##
+## databases -----------------------------------------------------------------##
+
+# note: no "http://" at start of urls
+from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
+HTTP = HTTPRemoteProvider()
+
+rule download_ncbi_taxonomy:
+    output:
+        targz=temp("resources/taxdump.tar.gz"),
+        nodes="resources/nodes.dmp",
+        names="resources/names.dmp"
+    shell:
+        "curl https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz -o {output.targz}\n"
+        "cd resources/ && tar -xzf taxdump.tar.gz nodes.dmp names.dmp"
+
+rule download_uniref:
+    output: "resources/uniref50.fasta.gz"
+    shell:
+        "curl https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref50/uniref50.fasta.gz -o {output}"
+         
+# the simple 'accession.version\ttaxid' format does not seem to work for custom accessions
+rule makedb_uniref:
+    input:
+        faagz="resources/uniref50.fasta.gz",
+        nodes="resources/nodes.dmp",
+        names="resources/names.dmp"
+    output:
+        taxonmap="resources/acc2tax.tsv.gz",
+        dmnd="resources/uniref50.dmnd"
+    shell:
+        """
+        ( echo -e "accession.version\ttaxid";
+          gzip -cd {input.faagz} |
+          perl -ne 'if(/>UniRef50_(\S+).*TaxID=(\d+)/){{print $1,"\t",$2,"\n"}}'
+        ) | gzip -c > {output.taxonmap}
+        """
+        'diamond makedb --in {input.faagz} --db {output.dmnd}'
+        ' --taxonmap {output.taxonmap} --taxonnodes {input.nodes} --taxonnames {input.names}'
+
+
+
+## analysis -----------------------------------------------------------------##
 # rule download_assemblies:
 
 rule search_assemblies:
@@ -17,15 +58,20 @@ rule search_assemblies:
         "--db {config[search][db]} --evalue {config[search][evalue]} "
         "-W {config[search][chop_window]} -S {config[search][chop_step]} "
         "{config[search][other_args]}\n"
-        "perl -i.bak 'print if $F[3] > {config[search][min_length_aa]}' {output}"
+
+rule clean_search_hits:
+    input: "results/{asm}-search.o6"
+    output: "results/{asm}-search-cleaned.o6"
+    shell:
+        "uniq {input} | perl -ane 'print if $F[3] > {config[search][min_length_aa]}' > {output}"
         
 rule extract_putatEVEs:
     input:
         fna="results/{asm}.fna",
-        o6="results/{asm}-search.o6"
+        o6="results/{asm}-search-cleaned.o6"
     output: "results/{asm}-putatEVEs.fna"
     shell:
-        "workflow/scripts/blast2bed -q | seqkit subseq --bed /dev/fd/0 {input.fna} > {output}"
+        "workflow/scripts/blast2bed -q {input.o6} | seqkit subseq --bed /dev/fd/0 {input.fna} > {output}"
 
 rule retrosearch_putatEVEs:
     input: "results/{asm}-putatEVEs.fna" 
@@ -36,15 +82,19 @@ rule retrosearch_putatEVEs:
         "--db {config[retrosearch][db]} --evalue {config[retrosearch][evalue]} "
         "{config[retrosearch][other_args]} "
 
-# rule validate_putatEVEs:
-        
-# rule extract_validatEVEs:
-#     input:
-#         fna=asm_dir + "{asm}.fna",
-#         o6=res_dir + "{asm}-??"
-#     output: res_dir + "{asm}-putatEVEs.fna" 
-#     shell:
-#         "perl -ane 'print if $F[3] > 83' {input.o6} | " +
-#         scr_dir + "blast2bed -q | " +
-#         "seqkit subseq --bed /dev/fd/0 {input.fna} > {output}"
-    
+rule validate_putatEVEs:
+    input: "results/{asm}-retro.o6"
+    output:
+        tsv="results/{asm}-validatEVEs.tsv",
+        pdf="results/{asm}-validatEVEs.pdf"
+    shell:
+        "workflow/scripts/validate.R {input} {output.tsv} {output.pdf}"
+
+rule extract_validatEVEs:
+    input:
+        fna="results/{asm}-putatEVEs.fna",
+        tsv="results/{asm}-validatEVEs.tsv"
+    output: "results/{asm}-validatEVEs.fna" 
+    shell:
+        "cut -f1 {input.tsv} | seqkit grep -f - {input.fna} > {output}"
+
