@@ -2,19 +2,20 @@
 
 To identify EVEs take these 3 steps:
 
-1. setup the databases (see [[Install & Setup]])
+*1. setup the databases (see [[Install & Setup]])*
 
-2. Provide genomes to scan. You can do so in two ways, via
-  - files :: place your genomes as fasta files with =.fna= extensions into the
-    =genomes/= folder
-  - accessions :: add SRA WGS accessions to the first column of
+*2. Provide genomes to scan. You can do so in two ways, via*
+  - a) files :: place your genomes as fasta files with =.fna= extensions into the
+    =genomes/= folder, or
+  - b) accessions :: add SRA WGS accessions to the first column of
     =genomes.tsv=. The genome fasta files will automatically be downloaded from
     NCBI to =genomes/<accession>.fna= (see
     https://www.ncbi.nlm.nih.gov/Traces/wgs/, for example, QMGA01 for the
     bottlenose dolphin).
 
-3. Run the pipeline
+*3. Run the pipeline*
 #+begin_src sh
+mamba activate omx-discover-eves
 snakemake --cores 30
 #+end_src
 
@@ -58,8 +59,14 @@ resources/VDB.dmnd
 
 - min_length: 83 amino-acids (250 bp in tblastn)
 
+- VDB80 - reduced DB at 80% identity over 80 coverage (with mmseqs); min-length
+  60aa; tantan masked to get rid of low-complexity region, such as
+  Proline/Serine linkers Ig side chains
+
 ** Questions & Notes
-- lots of putatEVEs are low-complexity repeats - meaningful?
+- lots of putatEVEs are low-complexity repeats - meaningful? => I'm now tantan
+  masking VDB which gets rid of most of these low-complexity hits (Ig side chain
+  stuff, PSSPSPSS linker, ...)
 
 - currently I'm not filtering out retroviral hits - but we probably should?
 
