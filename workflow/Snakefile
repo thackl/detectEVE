@@ -3,15 +3,19 @@ configfile: "config/config.yaml"
 
 # read accessions for genome download
 import pandas as pd
+import glob
 
 def acc():
     df = pd.read_csv("genomes.tsv", sep="\t")
-    return df['#accession'].tolist()
+    tsv_acc = df['#accession'].tolist()
 
+    fna_acc = glob.glob("genomes/*.fna")
+    fna_acc = [x.removeprefix("genomes/").removesuffix(".fna") for x in fna_acc]
 
+    return list(set(tsv_acc + fna_acc))
 
 rule all:
-    input: expand("results/{asm}-validatEVEs.fna", asm=acc())
+    input: expand("results/{asm}-validatEVEs.{ext}", asm=acc(), ext=["fna", "pdf", "tsv"])
 
     
 ## genome download ----------------------------------------------------------##

@@ -16,7 +16,10 @@ To identify EVEs take these 3 steps:
 *3. Run the pipeline*
 #+begin_src sh
 mamba activate omx-discover-eves
-snakemake --cores 30
+snakemake --cores 30 --keep-going # don't terminate snakemake if one genome
+                                  # fails but others are still being
+                                  # processed. Can happen if a genomes contains
+                                  # no putativEVEs or validatEVEs
 #+end_src
 
 The pipeline produces the following final files in =results/=:
