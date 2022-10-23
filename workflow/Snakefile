@@ -1,15 +1,80 @@
 # relative to workflow dir
 configfile: "config/config.yaml"
 
-#ASM, = glob_wildcards('assemblies/{asm}.fna')
-#ASM.sort()
+# read accessions for genome download
+import pandas as pd
+
+def acc():
+    df = pd.read_csv("genomes.tsv", sep="\t")
+    return df['#accession'].tolist()
+
+
+
+rule all:
+    input: expand("results/{asm}-validatEVEs.fna", asm=acc())
+
+    
+## genome download ----------------------------------------------------------##
+rule download_genome:
+    output: "genomes/{asm}.fna"
+    # a bit dirty to prevent mulitple downloads to run at same time
+    threads: workflow.cores * 0.60
+    shell:
+        "(cd genomes && ../workflow/scripts/download-ncbi-genomes.pl {wildcards.asm})"
+
+## analysis -----------------------------------------------------------------##
+rule search_assemblies:
+    input: "genomes/{asm}.fna"
+    output: "results/{asm}-search.o6"
+    threads: workflow.cores
+    shell:
+        "workflow/scripts/diamond-chopped.sh blastx "
+        "--query {input} --out {output} --threads {threads} "
+        "--db {config[search][db]} --evalue {config[search][evalue]} "
+        "-W {config[search][chop_window]} -S {config[search][chop_step]} "
+        "{config[search][other_args]}\n"
+
+rule clean_search_hits:
+    input: "results/{asm}-search.o6"
+    output: "results/{asm}-search-cleaned.o6"
+    shell:
+        "uniq {input} | perl -ane 'print if $F[3] > {config[search][min_length_aa]}' > {output}"
+        
+rule extract_putatEVEs:
+    input:
+        fna="genomes/{asm}.fna",
+        o6="results/{asm}-search-cleaned.o6"
+    output: "results/{asm}-putatEVEs.fna"
+    shell:
+        "workflow/scripts/blast2bed -q {input.o6} | seqkit subseq --bed /dev/fd/0 {input.fna} > {output}"
+
+rule retrosearch_putatEVEs:
+    input: "results/{asm}-putatEVEs.fna" 
+    output: "results/{asm}-retro.o6"
+    threads: workflow.cores
+    shell:
+        "diamond blastx --query {input} --out {output} --threads {threads} "
+        "--db {config[retrosearch][db]} --evalue {config[retrosearch][evalue]} "
+        "{config[retrosearch][other_args]} "
+
+rule validate_putatEVEs:
+    input: "results/{asm}-retro.o6"
+    output:
+        tsv="results/{asm}-validatEVEs.tsv",
+        pdf="results/{asm}-validatEVEs.pdf"
+    shell:
+        "workflow/scripts/validate.R {input} {output.tsv} {output.pdf}"
+
+rule extract_validatEVEs:
+    input:
+        fna="results/{asm}-putatEVEs.fna",
+        tsv="results/{asm}-validatEVEs.tsv"
+    output: "results/{asm}-validatEVEs.fna" 
+    shell:
+        "cut -f1 {input.tsv} | seqkit grep -f - {input.fna} > {output}"
+
 
 ## databases -----------------------------------------------------------------##
-
-# note: no "http://" at start of urls
-from snakemake.remote.HTTP import RemoteProvider as HTTPRemoteProvider
-HTTP = HTTPRemoteProvider()
-
 rule download_ncbi_taxonomy:
     output:
         targz=temp("resources/taxdump.tar.gz"),
@@ -42,59 +107,3 @@ rule makedb_uniref:
         """
         'diamond makedb --in {input.faagz} --db {output.dmnd}'
         ' --taxonmap {output.taxonmap} --taxonnodes {input.nodes} --taxonnames {input.names}'
-
-
-
-## analysis -----------------------------------------------------------------##
-# rule download_assemblies:
-
-rule search_assemblies:
-    input: "results/{asm}.fna"
-    output: "results/{asm}-search.o6"
-    threads: 12
-    shell:
-        "workflow/scripts/diamond-chopped.sh blastx "
-        "--query {input} --out {output} --threads {threads} "
-        "--db {config[search][db]} --evalue {config[search][evalue]} "
-        "-W {config[search][chop_window]} -S {config[search][chop_step]} "
-        "{config[search][other_args]}\n"
-
-rule clean_search_hits:
-    input: "results/{asm}-search.o6"
-    output: "results/{asm}-search-cleaned.o6"
-    shell:
-        "uniq {input} | perl -ane 'print if $F[3] > {config[search][min_length_aa]}' > {output}"
-        
-rule extract_putatEVEs:
-    input:
-        fna="results/{asm}.fna",
-        o6="results/{asm}-search-cleaned.o6"
-    output: "results/{asm}-putatEVEs.fna"
-    shell:
-        "workflow/scripts/blast2bed -q {input.o6} | seqkit subseq --bed /dev/fd/0 {input.fna} > {output}"
-
-rule retrosearch_putatEVEs:
-    input: "results/{asm}-putatEVEs.fna" 
-    output: "results/{asm}-retro.o6"
-    threads: 12
-    shell:
-        "diamond blastx --query {input} --out {output} --threads {threads} "
-        "--db {config[retrosearch][db]} --evalue {config[retrosearch][evalue]} "
-        "{config[retrosearch][other_args]} "
-
-rule validate_putatEVEs:
-    input: "results/{asm}-retro.o6"
-    output:
-        tsv="results/{asm}-validatEVEs.tsv",
-        pdf="results/{asm}-validatEVEs.pdf"
-    shell:
-        "workflow/scripts/validate.R {input} {output.tsv} {output.pdf}"
-
-rule extract_validatEVEs:
-    input:
-        fna="results/{asm}-putatEVEs.fna",
-        tsv="results/{asm}-validatEVEs.tsv"
-    output: "results/{asm}-validatEVEs.fna" 
-    shell:
-        "cut -f1 {input.tsv} | seqkit grep -f - {input.fna} > {output}"
-

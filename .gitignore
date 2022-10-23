@@ -3,3 +3,5 @@ results/*
 !results/.gitkeep
 resources/*
 !resources/.gitkeep
+genomes/*
+!genomes/.gitkeep

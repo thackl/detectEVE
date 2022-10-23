@@ -38,7 +38,7 @@ r2 <- r1 |>
   filter(!is.na(evidence) & length > 83) |> 
   arrange(-length, evalue) |>
   slice_head(n=1) |> 
-  arrange(confidence, desc(evidence), skingdoms, sphylums, evalue)
+  arrange(confidence, evidence, skingdoms, sphylums, evalue)
 
 # plot hit overview
 #p1 <- 
