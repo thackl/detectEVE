@@ -14,9 +14,12 @@ def acc():
 
     return list(set(tsv_acc + fna_acc))
 
+## Pseudo-rules
 rule all:
     input: expand("results/{asm}-validatEVEs.{ext}", asm=acc(), ext=["fna", "pdf", "tsv"])
 
+rule setup:
+    input: "resources/uniref50.dmnd"
     
 ## genome download ----------------------------------------------------------##
 rule download_genome:

@@ -1,50 +1,63 @@
-** Usage
+** Install and use
 
 To identify EVEs take these 3 steps:
 
-*1. setup the databases (see [[Install & Setup]])*
+*1. Install*
 
-*2. Provide genomes to scan. You can do so in two ways, via*
-  - a) files :: place your genomes as fasta files with =.fna= extensions into the
+#+begin_src sh
+git clone https://github.com/thackl/omx-discover-eves
+cd omx-discover-eves
+
+# install with conda - I prefer mamba
+mamba create -n omx-discover-eves
+mamba activate omx-discover-eves
+mamba env update --file workflow/envs/env.yaml
+#+end_src
+
+*2. Setup databases*
+
+#+begin_src sh
+# download uniref50 for retroblast
+snakemake --cores 30 setup
+
+# add virus ref db
+resources/VDB.dmnd
+#+end_src
+
+*3. Provide genomes via /files/ or /accessions/*
+  - *files*: place your genomes as fasta files with =.fna= extensions into the
     =genomes/= folder, or
-  - b) accessions :: add SRA WGS accessions to the first column of
+  - *accessions*: add SRA WGS accessions to the first column of
     =genomes.tsv=. The genome fasta files will automatically be downloaded from
     NCBI to =genomes/<accession>.fna= (see
     https://www.ncbi.nlm.nih.gov/Traces/wgs/, for example, QMGA01 for the
     bottlenose dolphin).
 
-*3. Run the pipeline*
+*4. Run the pipeline*
 #+begin_src sh
-mamba activate omx-discover-eves
 snakemake --cores 30 --keep-going # don't terminate snakemake if one genome
                                   # fails but others are still being
                                   # processed. Can happen if a genomes contains
                                   # no putativEVEs or validatEVEs
 #+end_src
 
+*Known issues* If you encounter an error related to
+/tidyverse/stringi/libicui18n.so.58/ in the Rscripts, try reinstalling
+=stringi= locally from scratch
+
+#+begin_src sh
+mamba remove r-stringi r-tidyverse
+R -e 'install.packages("stringi")'
+mamba install r-tidyverse
+#+end_src
+
+** Output
 The pipeline produces the following final files in =results/=:
 - =<genome_id>-validatEVEs.tsv= :: best hit of the EVE with evidence and confidence
   annotation (exogenous virus: high, eve-ish description & hypothetical protein:
   low)
 - =<genome_id>-validatEVEs.pdf= :: graphical overview of hit distribution for validatEVEs
 - =<genome_id>-validatEVEs.fna= :: validatEVEs nucleotide sequences
-
-** Install & Setup
-
-#+begin_src sh
-workflow=omx-discover-eves
-git clone https://github.com/thackl/$workflow
-cd $workflow
-mamba create -n $workflow;          
-mamba env update -n $workflow --file workflow/envs/env.yaml
-mamba activate $workflow
-
-# download uniref50 for retroblast
-snakemake --cores 30 resources/uniref50.dmnd
-
-# add virus ref db
-resources/VDB.dmnd
-#+end_src
 
 ** Changes (compared to legacy)
 - =diamond blastx= instead of =tblastn=
