@@ -1,10 +1,14 @@
 # relative to workflow dir
 configfile: "config/config.yaml"
 
-# read accessions for genome download
 import pandas as pd
 import glob
+import requests
+import re
+import os
+from os.path import exists
 
+# read accessions for genome download
 def acc():
     df = pd.read_csv("genomes.tsv", sep="\t")
     tsv_acc = df['#accession'].tolist()
@@ -16,7 +20,9 @@ def acc():
 
 ## Pseudo-rules
 rule all:
-    input: expand("results/{asm}-validatEVEs.{ext}", asm=acc(), ext=["fna", "pdf", "tsv"])
+    input:
+        "resources/.check_dbs",
+        expand("results/{asm}-validatEVEs.{ext}", asm=acc(), ext=["fna", "pdf", "tsv"])
 
 rule setup:
     input: "resources/uniref50.dmnd"
@@ -82,6 +88,23 @@ rule extract_validatEVEs:
 
 
 ## databases -----------------------------------------------------------------##
+# we don't force DBs as input but create a check file other rules can use as
+# targets and only suggest download
+rule check_dbs:
+    output: temp("resources/.check_dbs")
+    run:
+        print("\n# Checking required reference databases ----#")
+        
+        for db in [config["search"]["db"], config["retrosearch"]["db"]]:
+            if exists(db) :
+                print("- " + db + " .. ok")
+            else:
+                print("\nERROR: Reference database `" + db + "` missing" +
+                "\nRun `snakemake setup` to download and prepare the reference databases\n\n")
+                os._exit(1)
+
+        shell("touch {output}")
+
 rule download_ncbi_taxonomy:
     output:
         targz=temp("resources/taxdump.tar.gz"),
@@ -96,8 +119,7 @@ rule download_uniref:
     shell:
         "curl https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref50/uniref50.fasta.gz -o {output}"
          
-# the simple 'accession.version\ttaxid' format does not seem to work for custom accessions
-rule makedb_uniref:
+rule setup_uniref:
     input:
         faagz="resources/uniref50.fasta.gz",
         nodes="resources/nodes.dmp",
@@ -110,6 +132,71 @@ rule makedb_uniref:
         ( echo -e "accession.version\ttaxid";
           gzip -cd {input.faagz} |
           perl -ne 'if(/>UniRef50_(\S+).*TaxID=(\d+)/){{print $1,"\t",$2,"\n"}}'
+        ) | gzip -c > {output.taxonmap}
+        """
+        'diamond makedb --in {input.faagz} --db {output.dmnd}'
+        ' --taxonmap {output.taxonmap} --taxonnodes {input.nodes} --taxonnames {input.names}'
+
+rule download_rvdb:
+    output:
+        xz=temp("resources/rvdb100.faa.xz"),
+        faa=temp("resources/rvdb100.faa")
+    shell:
+        """
+        set +o pipefail;
+        url=https://rvdb-prot.pasteur.fr/
+        db=$(curl -fs $url | grep -oPm1 'files/U-RVDBv[0-9.]+-prot.fasta.xz')
+        curl $url/$db -o {output.xz}
+        # unpack
+        xz -cd {output.xz} | seqkit seq -m 60 - | seqkit rmdup -s - > {output.faa}
+        """
+
+# 12GB RAM should suffice: "Approximated maximum memory consumption: 10179M"
+rule cluster_rvdb:
+    input:
+        "resources/rvdb100.faa"
+    output:
+        faa=temp("resources/rvdb80r.faa"),
+        cls=temp("resources/rvdb80r.faa.clstr")
+    threads: workflow.cores
+    shell:
+        """
+        cd-hit -c .8 -i {input} -o {output.faa} -M 12000 -T {threads}
+        """
+
+rule taxify_rvdb:
+    input:
+        "resources/rvdb80r.faa"
+    output:
+        acc=temp("resources/rvdb80-acc.tsv"),
+        tax=temp("resources/rvdb80-acc2tax.tsv"),
+        faa=temp("resources/rvdb80.faa"),
+        gz="resources/rvdb80.faa.gz",
+        
+    threads: 10
+    shell:
+        """
+        grep '^>' {input} | cut -f3 -d'|' > {output.acc} 
+        curl https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz |
+        csvtk -tT grep -j {threads} -P {output.acc} > {output.tax}
+        seqkit replace -j {threads} -p 'acc\\|[^\\|]+\\|([^\\|]+).*' -r '${{0}} acc=${{1}} taxid={{kv}}' -k {output.tax} {input} -m NA > {output.faa}
+        gzip {output.faa}
+        """
+        
+        
+rule setup_rvdb:
+    input:
+        faagz="resources/rvdb80.faa.gz",
+        nodes="resources/nodes.dmp",
+        names="resources/names.dmp"
+    output:
+        taxonmap="resources/rvdb80-acc2tax.tsv.gz",
+        dmnd="resources/rvdb80.dmnd"
+    shell:
+        """
+        ( echo -e "accession.version\ttaxid";
+          gzip -cd {input.faagz} |
+          perl -ne 'if(/>.*acc=(\S+).*taxid=(\d+)/){{print $1,"\t",$2,"\n"}}'
         ) | gzip -c > {output.taxonmap}
         """
         'diamond makedb --in {input.faagz} --db {output.dmnd}'
