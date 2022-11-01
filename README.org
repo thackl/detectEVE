@@ -6,7 +6,7 @@
 git clone https://github.com/thackl/omx-discover-eves
 cd omx-discover-eves
 
-# install with conda - I prefer mamba
+# install with conda - I prefer mamba via https://github.com/conda-forge/miniforge
 mamba create -n omx-discover-eves
 mamba activate omx-discover-eves
 mamba env update --file workflow/envs/env.yaml
@@ -15,11 +15,9 @@ mamba env update --file workflow/envs/env.yaml
 *2. Setup databases*
 
 #+begin_src sh
+# download and cluster rvdb
 # download uniref50 for retroblast
 snakemake --cores 30 setup
-
-# add virus ref db
-resources/VDB.dmnd
 #+end_src
 
 *3. Provide genomes as files or accessions*
@@ -63,31 +61,39 @@ The pipeline produces the following final files in =results/=:
 [[file:omx-discover-eves.png]]
 
 ** Changes (compared to legacy)
+- rvdb80 (80% clustered with cd-hit; min-length 60aa) instead of
+  VDB/VDB80.
+  - Latest version automatically downloaded from source at
+  Pasteur.
+  - Annotated with NCBI-tax
+  - filtering is done in diamond using --taxonlist / --taxon-exclude to control
+    which viral groups to scan for
+
+- EVE min_length: 83 amino-acids (250 bp in tblastn)
+
 - =diamond blastx= instead of =tblastn=
-
-- =diamond= is used in frameshift mode to can extend hits across frameshifts;
+  - =diamond= is used in frameshift mode to can extend hits across frameshifts;
   dropped merging of abutting =tblastn= hits from orig pipeline
-
-- need to chop long contigs for diamond or else I lose hits (50k + 10k overlap
+  - =diamond= uses tantan
+  mask, which gets rid of low-complexity region, such as Proline/Serine linkers
+  Ig side chains
+  - need to chop long contigs for diamond or else I lose hits (50k + 10k overlap
   windows). Creates possibility of redundant hits right at window edge (could be
   filtered?)
 
-- uniref50 instead of NR for retroblast (faster, less redundant)
-
-- retroblast: --top 20 (top hits within 20% top score, rather than strict -k 10 top hits)
-
-- min_length: 83 amino-acids (250 bp in tblastn)
-
-- VDB80 - reduced DB at 80% identity over 80 coverage (with mmseqs); min-length
-  60aa; tantan masked to get rid of low-complexity region, such as
-  Proline/Serine linkers Ig side chains
+- retroblast with uniref50 + rvdb80 instead of NR
+  - faster, less redundant, more viral hits
+  - --top 20 (top hits within 20% top score, rather than strict -k 10 top hits)
 
 ** Questions & Notes
-- lots of putatEVEs are low-complexity repeats - meaningful? => I'm now tantan
-  masking VDB which gets rid of most of these low-complexity hits (Ig side chain
-  stuff, PSSPSPSS linker, ...)
+- lots of putatEVEs are low-complexity repeats - meaningful? 
+  - [I'm now tantan masking VDB which gets rid of most of these low-complexity hits (Ig side chain
+  stuff, PSSPSPSS linker, ...)]
+  - I'm now using tantan masking in diamond which gets rid of most of these low-complexity hits
 
 - currently I'm not filtering out retroviral hits - but we probably should?
+  - can now be filtered in search via damond taxonlist/taxon-exclude, but might
+    also filter retro hits after retroblast
 
 - are validatEVEs just subset of putatEVEs or somehow extracted based on
-  retroblast results?
+  retroblast results? - YES
