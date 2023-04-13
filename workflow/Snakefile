@@ -177,38 +177,41 @@ rule download_rvdb:
         db=$(curl -fs $url | grep -oPm1 'files/U-RVDBv[0-9.]+-prot.fasta.xz')
         curl $url/$db -o {output.xz}
         # unpack
-        xz -cd {output.xz} | seqkit seq -m 60 - | seqkit rmdup -s - > {output.faa}
+        xz -cd {output.xz} | seqkit seq -m 60 - | seqkit rmdup -s - | perl -pe 's/^>(acc\|\w+\|)([^|]+)/>$2 $1$2/' > {output.faa}
         """
 
-# 12GB RAM should suffice: "Approximated maximum memory consumption: 10179M"
+# 16GB RAM should suffice: "Approximated maximum memory consumption: 10179M"
 rule cluster_rvdb:
     input:
         "resources/rvdb100.faa"
     output:
-        faa=temp("resources/rvdb80r.faa"),
-        cls=temp("resources/rvdb80r.faa.clstr")
+        faa=temp("resources/rvdb80.faa"),
+        cls=temp("resources/rvdb80.faa.clstr"),
+	faagz="resources/rvdb80.faa.gz"
     threads: workflow.cores
     shell:
         """
-        cd-hit -c .8 -i {input} -o {output.faa} -M 12000 -T {threads}
+        cd-hit -c .8 -i {input} -o {output.faa} -M 16000 -T {threads}
+	gzip -k {output.faa}
         """
 
-# DEPRECATED - can get taxinfo from taxified diamond DB
-# rule download_rvdb_taxonomy:
-#     # a bit dirty to prevent mulitple downloads to run at same time
-#     threads: workflow.cores * 0.60
-#     input:
-#         "resources/rvdb80r.faa"
-#     output:
-#         acc=temp("resources/rvdb80-acc.tsv"),
-#         tax=temp("resources/rvdb80-acc2tax.tsv")
-#     threads: 10
-#     shell:
-#         """
-#         grep '^>' {input} | cut -f3 -d'|' > {output.acc} 
-#         curl https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz |
-#         csvtk -tT grep -j {threads} -P {output.acc} > {output.tax}
-#         """
+rule download_rvdb_taxonomy:
+    # a bit dirty to prevent mulitple downloads to run at same time
+    threads: workflow.cores * 0.60
+    input:
+        "resources/rvdb80.faa"
+    output:
+        acc=temp("resources/rvdb80-acc.tsv"),
+        tax=temp("resources/rvdb80-acc2tax.tsv"),
+        taxgz=temp("resources/rvdb80-acc2tax.tsv.gz")
+    threads: 10
+    shell:
+        """
+        grep '^>' {input} | cut -f3 -d'|' > {output.acc} 
+        curl https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz |
+        csvtk -tT grep -j {threads} -P {output.acc} > {output.tax}
+        gzip -k {output.tax}
+        """
 
 # DEPRECATED - can get taxinfo from taxified diamond DB
 # rule taxify_rvdb:
@@ -228,7 +231,7 @@ rule cluster_rvdb:
 rule setup_rvdb:
     input:
         faagz="resources/rvdb80.faa.gz",
-        mapgz="resources/ncbi-acc2tax.gz"
+        mapgz="resources/rvdb80-acc2tax.tsv.gz",
         nodes="resources/nodes.dmp",
         names="resources/names.dmp"
     output:
