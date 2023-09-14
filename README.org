@@ -3,12 +3,12 @@
 *1. Download and install workflow*
 
 #+begin_src sh
-git clone https://github.com/thackl/omx-discover-eves
-cd omx-discover-eves
+git clone https://github.com/thackl/detectEVE
+cd detectEVE
 
 # install with conda - I prefer mamba via https://github.com/conda-forge/miniforge
-mamba create -n omx-discover-eves
-mamba activate omx-discover-eves
+mamba create -n detectEVE
+mamba activate detectEVE
 mamba env update --file workflow/envs/env.yaml
 #+end_src
 
@@ -58,7 +58,7 @@ The pipeline produces the following final files in =results/=:
 - =<genome_id>-validatEVEs.fna= - validatEVEs nucleotide sequences
 
 ** Workflow
-[[file:omx-discover-eves.png]]
+[[file:detectEVE.png]]
 
 ** Changes (compared to legacy)
 - rvdb80 (80% clustered with cd-hit; min-length 60aa) instead of
