@@ -58,7 +58,7 @@ The pipeline produces the following final files in =results/=:
 - =<genome_id>-validatEVEs.fna= - validatEVEs nucleotide sequences
 
 ** Workflow
-[[file:detectEVE.png]]
+[[file:detectEVE-workflow.png]]
 
 ** Changes (compared to legacy)
 - rvdb80 (80% clustered with cd-hit; min-length 60aa) instead of
