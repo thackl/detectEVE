@@ -9,7 +9,7 @@ Options:
   -a --accessions ACC   NCBI genome accessions to download and scan
   -o --out OUT          output directory [default: detectEVE-DATE]
   -s --snake ARGS       additional arguments to pass through to snakemake
-                        [default: --cores all]
+                        [default: --cores all --keep-going]
 
   --setup-databases     download and prepare reference databases. Configure
                         paths in config.yaml.
