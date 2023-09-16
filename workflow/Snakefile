@@ -1,5 +1,6 @@
 # relative to workflow dir
-configfile: "config/config.yaml"
+wf_dir=config["wf_dir"]
+configfile: f"{wf_dir}/config.yaml"
 
 import pandas as pd
 import glob
@@ -7,6 +8,13 @@ import requests
 import re
 import os
 from os.path import exists
+
+scripts=os.path.join(wf_dir, "workflow/scripts")
+
+dbs=config["db_dir"]
+if not os.path.isabs(dbs):
+    dbs=os.path.join(wf_dir, dbs)
+
 
 # read accessions for genome download
 def acc():
@@ -18,20 +26,6 @@ def acc():
 
     return list(set(tsv_acc + fna_acc))
 
-def check_dbs():
-    print("\n# Checking required reference databases ----#")
-    
-    for db in [config["search"]["db"], config["retrosearch"]["db"]]:
-        if exists(db) :
-            print("- " + db + " .. ok")
-        else:
-            print("\nERROR: Reference database `" + db + "` missing" +
-                  "\nRun `snakemake setup` to download and prepare the reference databases\n\n")
-            os._exit(1)
-
-    shell("touch resources/.check_db")
-    return("resources/.check_db")
-
 ## Pseudo-rules
 rule all:
     input:
@@ -40,9 +34,9 @@ rule all:
 
 rule setup:
     input:
-        "resources/uniref50.dmnd",
-        "resources/rvdb80.dmnd",
-        "resources/rvdb80-uniref50.dmnd"
+        f"{dbs}/uniref50.dmnd",
+        f"{dbs}/rvdb80.dmnd",
+        f"{dbs}/rvdb80-uniref50.dmnd"
     
 ## genome download ----------------------------------------------------------##
 rule download_genome:
@@ -50,7 +44,7 @@ rule download_genome:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
     shell:
-        "(cd genomes && ../workflow/scripts/download-ncbi-genomes.pl {wildcards.asm})"
+        "(cd genomes && {scripts}/download-ncbi-genomes.pl {wildcards.asm})"
 
 ## analysis -----------------------------------------------------------------##
 rule search_assemblies:
@@ -58,9 +52,9 @@ rule search_assemblies:
     output: "results/{asm}-search.o6"
     threads: workflow.cores
     shell:
-        "workflow/scripts/diamond-chopped.sh blastx "
+        "{scripts}/diamond-chopped.sh blastx "
         "--query {input} --out {output} --threads {threads} "
-        "--db {config[search][db]} --evalue {config[search][evalue]} "
+        "--db {dbs}/{config[search][db]} --evalue {config[search][evalue]} "
         "-W {config[search][chop_window]} -S {config[search][chop_step]} "
         "{config[search][other_args]}\n"
 
@@ -76,7 +70,7 @@ rule extract_putatEVEs:
         o6="results/{asm}-search-cleaned.o6"
     output: "results/{asm}-putatEVEs.fna"
     shell:
-        "workflow/scripts/blast2bed -q {input.o6} | seqkit subseq --bed /dev/fd/0 {input.fna} > {output}"
+        "{scripts}/blast2bed -q {input.o6} | seqkit subseq --bed /dev/fd/0 {input.fna} > {output}"
 
 rule retrosearch_putatEVEs:
     input: "results/{asm}-putatEVEs.fna" 
@@ -84,7 +78,7 @@ rule retrosearch_putatEVEs:
     threads: workflow.cores
     shell:
         "diamond blastx --query {input} --out {output} --threads {threads} "
-        "--db {config[retrosearch][db]} --evalue {config[retrosearch][evalue]} "
+        "--db {dbs}/{config[retrosearch][db]} --evalue {config[retrosearch][evalue]} "
         "{config[retrosearch][other_args]} "
 
 rule validate_putatEVEs:
@@ -93,7 +87,7 @@ rule validate_putatEVEs:
         tsv="results/{asm}-validatEVEs.tsv",
         pdf="results/{asm}-validatEVEs.pdf"
     shell:
-        "workflow/scripts/validate.R {input} {output.tsv} {output.pdf}"
+        "{scripts}/validate.R {input} {output.tsv} {output.pdf}"
 
 rule extract_validatEVEs:
     input:
@@ -104,56 +98,60 @@ rule extract_validatEVEs:
         "cut -f1 {input.tsv} | seqkit grep -f - {input.fna} > {output}"
 
 
+
+
+
+
 ## databases -----------------------------------------------------------------##
 rule download_ncbi_taxonomy:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
     output:
-        targz=temp("resources/taxdump.tar.gz"),
-        nodes="resources/nodes.dmp",
-        names="resources/names.dmp"
+        targz=temp("{dbs}/taxdump.tar.gz"),
+        nodes="{dbs}/nodes.dmp",
+        names="{dbs}/names.dmp"
     shell:
         "curl https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz -o {output.targz}\n"
-        "cd resources/ && tar -xzf taxdump.tar.gz nodes.dmp names.dmp"
+        "cd {dbs}/ && tar -xzf taxdump.tar.gz nodes.dmp names.dmp"
 
 rule download_ncbi_acc2tax:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
-    output: "resources/ncbi-acc2tax.gz"
+    output: "{dbs}/ncbi-acc2tax.gz"
     shell: "curl https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz -o {output}"
 
 rule download_nr:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
-    output: "resources/nr.faa.gz"
+    output: "{dbs}/nr.faa.gz"
     shell: "curl https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz -o nr.faa.gz"
 
 rule setup_nr:
     input:
-        faagz="resources/nr.faa.gz",
-        mapgz="resources/ncbi-acc2tax.gz",
-        nodes="resources/nodes.dmp",
-        names="resources/names.dmp",
+        faagz="{dbs}/nr.faa.gz",
+        mapgz="{dbs}/ncbi-acc2tax.gz",
+        nodes="{dbs}/nodes.dmp",
+        names="{dbs}/names.dmp",
     output:
-        dmnd="resources/nr.dmnd"
+        dmnd="{dbs}/nr.dmnd"
     shell:
         'diamond makedb --in {input.faagz} --db {output.dmnd} --taxonmap {input.mapgz} --taxonnodes {input.nodes} --taxonnames {input.names}'
            
 rule download_uniref:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
-    output: "resources/uniref50.fasta.gz"
+    output: "{dbs}/uniref50.fasta.gz"
     shell:
         "curl https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref50/uniref50.fasta.gz -o {output}"
          
 rule setup_uniref:
     input:
-        faagz="resources/uniref50.fasta.gz",
-        nodes="resources/nodes.dmp",
-        names="resources/names.dmp"
+        faagz="{dbs}/uniref50.fasta.gz",
+        nodes="{dbs}/nodes.dmp",
+        names="{dbs}/names.dmp"
     output:
-        taxonmap=temp("resources/uniref50-acc2tax.tsv.gz"),
-        dmnd="resources/uniref50.dmnd"
+        taxonmap=temp("{dbs}/uniref50-acc2tax.tsv.gz"),
+        dmnd="{dbs}/uniref50.dmnd"
     shell:
         """
         ( echo -e "accession.version\ttaxid";
@@ -168,8 +166,8 @@ rule download_rvdb:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
     output:
-        xz=temp("resources/rvdb100.faa.xz"),
-        faa=temp("resources/rvdb100.faa")
+        xz=temp("{dbs}/rvdb100.faa.xz"),
+        faa=temp("{dbs}/rvdb100.faa")
     shell:
         """
         set +o pipefail;
@@ -183,11 +181,11 @@ rule download_rvdb:
 # 16GB RAM should suffice: "Approximated maximum memory consumption: 10179M"
 rule cluster_rvdb:
     input:
-        "resources/rvdb100.faa"
+        "{dbs}/rvdb100.faa"
     output:
-        faa=temp("resources/rvdb80.faa"),
-        cls=temp("resources/rvdb80.faa.clstr"),
-	faagz="resources/rvdb80.faa.gz"
+        faa=temp("{dbs}/rvdb80.faa"),
+        cls=temp("{dbs}/rvdb80.faa.clstr"),
+	faagz="{dbs}/rvdb80.faa.gz"
     threads: workflow.cores
     shell:
         """
@@ -199,11 +197,11 @@ rule download_rvdb_taxonomy:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
     input:
-        "resources/rvdb80.faa"
+        "{dbs}/rvdb80.faa"
     output:
-        acc=temp("resources/rvdb80-acc.tsv"),
-        tax=temp("resources/rvdb80-acc2tax.tsv"),
-        taxgz=temp("resources/rvdb80-acc2tax.tsv.gz")
+        acc=temp("{dbs}/rvdb80-acc.tsv"),
+        tax=temp("{dbs}/rvdb80-acc2tax.tsv"),
+        taxgz=temp("{dbs}/rvdb80-acc2tax.tsv.gz")
     threads: 10
     shell:
         """
@@ -216,11 +214,11 @@ rule download_rvdb_taxonomy:
 # DEPRECATED - can get taxinfo from taxified diamond DB
 # rule taxify_rvdb:
 #     input:
-#         faa="resources/rvdb80r.faa",
-#         tax="resources/rvdb80-acc2tax.tsv"
+#         faa="{dbs}/rvdb80r.faa",
+#         tax="{dbs}/rvdb80-acc2tax.tsv"
 #     output:
-#         faa=temp("resources/rvdb80.faa"),
-#         gz="resources/rvdb80.faa.gz"
+#         faa=temp("{dbs}/rvdb80.faa"),
+#         gz="{dbs}/rvdb80.faa.gz"
 #     threads: 10
 #     shell:
 #         """
@@ -230,26 +228,26 @@ rule download_rvdb_taxonomy:
 
 rule setup_rvdb:
     input:
-        faagz="resources/rvdb80.faa.gz",
-        mapgz="resources/rvdb80-acc2tax.tsv.gz",
-        nodes="resources/nodes.dmp",
-        names="resources/names.dmp"
+        faagz="{dbs}/rvdb80.faa.gz",
+        mapgz="{dbs}/rvdb80-acc2tax.tsv.gz",
+        nodes="{dbs}/nodes.dmp",
+        names="{dbs}/names.dmp"
     output:
-        dmnd="resources/rvdb80.dmnd"
+        dmnd="{dbs}/rvdb80.dmnd"
     shell:
         'diamond makedb --in {input.faagz} --db {output.dmnd} --taxonmap {input.mapgz} --taxonnodes {input.nodes} --taxonnames {input.names}'
 
 rule setup_retrodb:
     input:
-        rvdb_faagz="resources/rvdb80.faa.gz",
-        rvdb_taxgz="resources/rvdb80-acc2tax.tsv.gz",
-        uniref_faagz="resources/uniref50.fasta.gz",
-        uniref_taxgz="resources/uniref50-acc2tax.tsv.gz",
-        nodes="resources/nodes.dmp",
-        names="resources/names.dmp"
+        rvdb_faagz="{dbs}/rvdb80.faa.gz",
+        rvdb_taxgz="{dbs}/rvdb80-acc2tax.tsv.gz",
+        uniref_faagz="{dbs}/uniref50.fasta.gz",
+        uniref_taxgz="{dbs}/uniref50-acc2tax.tsv.gz",
+        nodes="{dbs}/nodes.dmp",
+        names="{dbs}/names.dmp"
     output:
-        taxgz=temp("resources/rvdb80-uniref50-acc2tax.tsv.gz"),
-        dmnd="resources/rvdb80-uniref50.dmnd"
+        taxgz=temp("{dbs}/rvdb80-uniref50-acc2tax.tsv.gz"),
+        dmnd="{dbs}/rvdb80-uniref50.dmnd"
     shell:
         """
         cp {input.rvdb_taxgz} {output.taxgz}

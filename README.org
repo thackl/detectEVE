@@ -17,25 +17,22 @@ mamba env update --file workflow/envs/env.yaml
 #+begin_src sh
 # download and cluster rvdb
 # download uniref50 for retroblast
-snakemake --cores 30 setup
+./detectEVE --setup-databases
 #+end_src
 
-*3. Provide genomes as files or accessions*
-  - for *files*: place your genomes as fasta files with =.fna= extensions into the
-    =genomes/= folder
-  - for *accessions*: add SRA WGS accessions to the first column of
-    =genomes.tsv=. The genome fasta files will automatically be downloaded from
-    NCBI to =genomes/<accession>.fna= (see
-    https://www.ncbi.nlm.nih.gov/Traces/wgs/, for example, QMGA01 for the
-    bottlenose dolphin).
-
-*4. Run the workflow*
+*3. Analyse genomes*
 #+begin_src sh
-snakemake --cores 30 --keep-going # don't terminate snakemake if one genome
-                                  # fails but others are still being
-                                  # processed. Can happen if a genomes contains
-                                  # no putativEVEs or validatEVEs
+# from files
+./detectEVE *.fasta
+
+# from NCBI SRA WGS accessions
+./detectEVE -a ACC [ACC ...]
 #+end_src
+
+- for *accessions*: The genome fasta files of all SRA WGS accessions will
+  automatically be downloaded from NCBI to =genomes/<accession>.fna= (see
+  https://www.ncbi.nlm.nih.gov/Traces/wgs/, for example, QMGA01 for the
+  bottlenose dolphin).
 
 *NOTE:* If you encounter an error related to
 /tidyverse/stringi/libicui18n.so.58/, try reinstalling =stringi= locally
@@ -44,19 +41,18 @@ snakemake --cores 30 --keep-going # don't terminate snakemake if one genome
 mamba remove r-stringi r-tidyverse
 R -e 'install.packages("stringi")'
 mamba install r-tidyverse
-
-# restart workflow from where it failed
-snakemake --cores 30 --keep-going
 #+end_src
+
+To restart the workflow from where it failed, just run the same command again.
 
 ** Output
 The pipeline produces the following final files in =results/=:
 - =<genome_id>-validatEVEs.tsv= - best hit of the EVE with evidence and confidence
   annotation (exogenous virus: high, eve-ish description & hypothetical protein:
   low)
-- =<genome_id>-validatEVEs.pdf= - graphical overview of hit distribution for validatEVEs
 - =<genome_id>-validatEVEs.fna= - validatEVEs nucleotide sequences
-
+- =<genome_id>-validatEVEs.pdf= - graphical overview of hit distribution for validatEVEs
+[[file:detectEVE-output-example.png]]
 ** Workflow
 [[file:detectEVE-workflow.png]]
 
@@ -97,3 +93,11 @@ The pipeline produces the following final files in =results/=:
 
 - are validatEVEs just subset of putatEVEs or somehow extracted based on
   retroblast results? - YES
+
+- CLI TODOs
+  - [X] analysis
+  - [X] setup
+  - [X] document in README
+  - [ ] test setup, custom DBs, ...
+
+- [ ] conda/mamba for entire package (not just deps)

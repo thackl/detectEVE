@@ -1,7 +1,7 @@
 .snakemake
 results/*
 !results/.gitkeep
-resources/*
-!resources/.gitkeep
+databases/*
+!databases/.gitkeep
 genomes/*
 !genomes/.gitkeep

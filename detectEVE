@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""detectEVE
+
+Usage:
+  detectEVE [options] (FASTA... | -a ACC...)
+  detectEVE --setup-databases [--snake ARGS] 
+
+Options:
+  -a --accessions ACC   NCBI genome accessions to download and scan
+  -o --out OUT          output directory [default: detectEVE-DATE]
+  -s --snake ARGS       additional arguments to pass through to snakemake
+                        [default: --cores all --keep-going]
+
+  --setup-databases     download and prepare reference databases. Configure
+                        paths in config.yaml.
+
+  -h --help             Show this screen.
+  --version             Show version.
+"""
+
+import os
+import subprocess
+import time
+import sys
+from docopt import docopt
+
+opt = docopt(__doc__, version='detectEVE v0.9.0', options_first=True)
+print(opt)
+
+# establish snakemake workflow and out dir
+out = os.path.abspath(opt["--out"])
+out = out.replace("detectEVE-DATE", time.strftime("detectEVE-%Y%m%d-%H%M%S"))
+
+# start workflow
+wf_dir  = os.path.dirname(os.path.abspath(__file__))
+
+if opt["--setup-databases"]:
+    cmd='snakemake setup' + f' {opt["--snake"]} --config wf_dir={wf_dir}'
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd=wf_dir)
+    sys.exit()
+
+
+# prep working dir and input
+gd=os.path.join(out, "genomes/")
+os.makedirs(gd, exist_ok=True)
+
+with open(f'{out}/genomes.tsv', "w") as f:
+    f.write("#accession\n")
+    if opt["--accessions"]:
+        f.writelines(opt["--accessions"])
+
+if opt["FASTA"]:
+    for fa in opt["FASTA"]:
+        os.symlink(os.path.abspath(fa), os.path.join(gd, os.path.basename(fa)))
+
+
+    cmd='snakemake' + f' --directory {out} {opt["--snake"]} --config wf_dir={wf_dir}'
+    print(cmd)
+    subprocess.run(cmd, shell=True, cwd=wf_dir)
