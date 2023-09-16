@@ -1,11 +1,12 @@
 # -*- org-hierarchical-todo-statistics: nil; org-latex-with-hyperref: nil; org-export-allow-bind-keywords: t -*-
-#+TITLE: Workpack detectEVE of project detectEVE
+#+TITLE: detectEVE dev-notes
 #+AUTHOR: Thomas Hackl
 #+DATE: 2023-09-16
 #+DESCRIPTION: 
 
-* Dev-notes
-** Changes (compared to legacy)
+
+* Changes compared to slequime's legacy
+
 - rvdb80 (80% clustered with cd-hit; min-length 60aa) instead of
   VDB/VDB80.
   - Latest version automatically downloaded from source at
@@ -30,17 +31,17 @@
   - faster, less redundant, more viral hits
   - --top 20 (top hits within 20% top score, rather than strict -k 10 top hits)
 
-** Questions & Notes
+* Questions & Notes
 - lots of putatEVEs are low-complexity repeats - meaningful? 
   - [I'm now tantan masking VDB which gets rid of most of these low-complexity hits (Ig side chain
   stuff, PSSPSPSS linker, ...)]
   - I'm now using tantan masking in diamond which gets rid of most of these low-complexity hits
 
-- currently I'm not filtering out retroviral hits - but we probably should?
-  - can now be filtered in search via damond taxonlist/taxon-exclude, but might
-    also filter retro hits after retroblast
+- [-] currently I'm not filtering out retroviral hits - but we probably should?
+  - [X] can now be filtered in search via damond taxonlist/taxon-exclude
+  - [ ] but might also filter retro hits after retroblast?
 
-- are validatEVEs just subset of putatEVEs or somehow extracted based on
+- [X] are validatEVEs just subset of putatEVEs or somehow extracted based on
   retroblast results? - YES
 
 - CLI TODOs
@@ -48,5 +49,8 @@
   - [X] setup
   - [X] document in README
   - [ ] test setup, custom DBs, ...
+
+- [ ] summarize output of multiple genomes
+- [ ] summarize across runs?
 
 - [ ] conda/mamba for entire package (not just deps)

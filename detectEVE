@@ -54,7 +54,6 @@ if opt["FASTA"]:
     for fa in opt["FASTA"]:
         os.symlink(os.path.abspath(fa), os.path.join(gd, os.path.basename(fa)))
 
-
-    cmd='snakemake' + f' --directory {out} {opt["--snake"]} --config wf_dir={wf_dir}'
-    print(cmd)
-    subprocess.run(cmd, shell=True, cwd=wf_dir)
+cmd='snakemake' + f' --directory {out} {opt["--snake"]} --config wf_dir={wf_dir}'
+print(cmd)
+subprocess.run(cmd, shell=True, cwd=wf_dir)
