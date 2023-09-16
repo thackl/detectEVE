@@ -1,16 +1,17 @@
+db_dir: "databases" # relative to workflow base or absolute
 search:
   evalue: 1e-4
   min_length_aa: 83
   # expert
   chop_window: 60000
   chop_step: 50000
-  db: "resources/rvdb80.dmnd"
+  db: "rvdb80.dmnd"
   other_args: "--taxonlist 2732396,2731342 -c1 -b6 -F 15 --range-culling -k 1 --outfmt 6"
   #db: "resources/VDB80.dmnd"
   #other_args: "-c1 -b6 -F 15 --range-culling -k 1 --outfmt 6"
 
 retrosearch:
-  db: "resources/rvdb80-uniref50.dmnd"
+  db: "rvdb80-uniref50.dmnd"
   evalue: 1e-4
   # expert
   other_args: "-c1 -b6 -F 15 --range-culling --top 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle staxids sscinames sskingdoms skingdoms sphylums"

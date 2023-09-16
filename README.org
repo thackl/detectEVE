@@ -97,3 +97,10 @@ The pipeline produces the following final files in =results/=:
 
 - are validatEVEs just subset of putatEVEs or somehow extracted based on
   retroblast results? - YES
+
+- CLI TODOs
+  - [X] analysis
+  - [ ] setup
+  - [ ] document in README
+
+- conda/mamba for entire package (not just deps)
