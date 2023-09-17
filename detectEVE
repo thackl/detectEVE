@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
-"""detectEVE
+"""detectEVE - find endogenous viral elements in genomes
+
+Please cite:
+- Brait, Hackl, Lequime, "detectEVE - ..."
+
+- Bigot T, Temmam S, Pérot P and Eloit M. "RVDB-prot, a reference viral protein database
+  and its HMM profiles", F1000Research (2020) doi:10.12688/f1000research.18776.2
+- Buchfink B, Reuter K, Drost HG. "Sensitive protein alignments at tree-of-life scale
+  using DIAMOND", Nature Methods 18, 366–368 (2021) doi:10.1038/s41592-021-01101-x
+- Shen W, Le S, Li Y, Hu F. "SeqKit: A Cross-Platform and Ultrafast Toolkit for FASTA/Q
+  File Manipulation". PLOS ONE 11(10): e0163962 (2016) doi:10.1371/journal.pone.0163962
 
 Usage:
   detectEVE [options] (FASTA... | -a ACC...)
@@ -11,17 +21,22 @@ Options:
   -s --snake ARGS       additional arguments to pass through to snakemake
                         [default: --cores all --keep-going]
 
-  --setup-databases     download and prepare reference databases. Configure
-                        paths in config.yaml.
+  --setup-databases     download and prepare reference databases. This can take a few
+                        hours. Configure paths in config.yaml.
 
   -h --help             Show this screen.
   --version             Show version.
+
+Support:
+  https://github.com/thackl/detectEVE
 """
 
 import os
+import glob
 import subprocess
 import time
 import sys
+import re
 from docopt import docopt
 
 opt = docopt(__doc__, version='detectEVE v0.9.0', options_first=True)
@@ -54,7 +69,22 @@ if opt["FASTA"]:
     for fa in opt["FASTA"]:
         os.symlink(os.path.abspath(fa), os.path.join(gd, os.path.basename(fa)))
 
+cmd='snakemake' + f' --directory {out} {opt["--snake"]} --config wf_dir={wf_dir}'
+print(cmd)
+subprocess.run(cmd, shell=True, cwd=wf_dir)
 
-    cmd='snakemake' + f' --directory {out} {opt["--snake"]} --config wf_dir={wf_dir}'
-    print(cmd)
-    subprocess.run(cmd, shell=True, cwd=wf_dir)
+# summary - quick and somewhat dirty summary
+n_searches = len(glob.glob('results/*-search.o6', root_dir=out))
+out_files = glob.glob('results/*-validatEVEs.tsv', root_dir=out)
+
+n_high = 0
+n_low = 0
+
+for of in out_files:
+    with open(f'{out}/{of}') as f:
+        contents = f.read()
+        n_high = n_high + sum(1 for match in re.finditer(r"\thigh\n", contents))
+        n_low = n_low + sum(1 for match in re.finditer(r"\tlow\n", contents))
+    
+print("\ndetectEVE run complete:")
+print(f"{n_searches} genomes scanned, {n_high} high and {n_low} low confidence EVE hits found")
