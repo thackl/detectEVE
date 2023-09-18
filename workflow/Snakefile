@@ -18,8 +18,8 @@ if not os.path.isabs(dbs):
 
 # read accessions for genome download
 def acc():
-    if(os.path.exists("accessions.tsv")):
-        df = pd.read_csv("accessions.tsv", sep="\t")
+    if(os.path.exists("accessions.csv")):
+        df = pd.read_csv("accessions.csv", sep=",")
         tsv_acc = df.iloc[:, 0].tolist()
 
         fna_acc = glob.glob("genomes/*.fna")

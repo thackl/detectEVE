@@ -12,12 +12,11 @@ Please cite:
   File Manipulation". PLOS ONE 11(10): e0163962 (2016) doi:10.1371/journal.pone.0163962
 
 Usage:
-  detectEVE [options] [<in.fa> ...]  # analyze localfasta files
-  detectEVE [options] -a acc.csv     # download & analyze NCBI accession table
-  detectEVE [options] -A acc,acc     # download & analyze NCBI accession list
-  detectEVE [options] [(-a acc.csv | -A acc,acc)] [<in.fa> ...]
-
-  detectEVE --setup-databases [--snake ARGS] # download and prep databases
+  detectEVE [options] [<in.fa> ...]
+  detectEVE [options] -a acc.csv
+  detectEVE [options] -A acc,acc
+  detectEVE [options] [--snake args] [(-a acc.csv | -A acc,acc)] [<in.fa> ...]
+  detectEVE --setup-databases [--snake args]
 
 Options:
   -a --acc-csv acc.csv   Comma-separated table with NCBI WGS genome accessions in
@@ -55,7 +54,7 @@ if len(sys.argv) == 1:
     sys.argv.append('-h')
 
 opt = docopt(__doc__, version='detectEVE v0.9.3', options_first=True)
-
+print(opt)
 # establish snakemake workflow and out dir
 out = time.strftime(opt["--out"])
 out = os.path.abspath(out)
@@ -79,7 +78,7 @@ if opt["--acc-csv"]:
 elif opt["--acc-list"]:
     with open(f'{out}/accessions.csv', "w") as f:
         f.write("#accession\n")
-        f.writelines(opt["--acc-list"].split(","))
+        [f.write(acc + "\n") for acc in opt["--acc-list"].split(",")]
 
 if opt["<in.fa>"]:
     for fa in opt["<in.fa>"]:
