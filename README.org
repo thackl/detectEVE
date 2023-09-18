@@ -1,46 +1,30 @@
-** Install and use
-
-*Download workflow and dependencies, and setup databases*
+** Usage
 
 #+begin_src sh
+# download workflow
 git clone https://github.com/thackl/detectEVE
 cd detectEVE
 
-# install with conda - I prefer mamba via https://github.com/conda-forge/miniforge
+# install dependencies via conda or mamba (https://github.com/conda-forge/miniforge)
 mamba create -n detectEVE
 mamba activate detectEVE
 mamba env update --file workflow/envs/env.yaml
 
-# download and prepare rvdb and uniref50
-./detectEVE --setup-databases
+# run detectEVE
+./detectEVE -h                  # show help
+./detectEVE --setup-databases   # download and prep rvdb and uniref50
+
+./detectEVE *.fasta             # analyze local genomes
+./detectEVE -a ACC [ACC ...]    # download and analyze NCBI WGS genomes
 #+end_src
+
+See [[https://www.ncbi.nlm.nih.gov/Traces/wgs/][NCBI SRA WGS]] for downloadable accessions. Downloaded genomes can be found at
+=genomes/<accession>.fna=.
 
 See [[Advanced database setup]] for alternatives and customization of databases.
 
-*Analyse genomes*
-#+begin_src sh
-# from files
-./detectEVE *.fasta
-
-# from NCBI SRA WGS accessions
-./detectEVE -a ACC [ACC ...]
-#+end_src
-
-- for *accessions*: The genome fasta files of all SRA WGS accessions will
-  automatically be downloaded from NCBI to =genomes/<accession>.fna= (see
-  https://www.ncbi.nlm.nih.gov/Traces/wgs/, for example, QMGA01 for the
-  bottlenose dolphin).
-
-*NOTE:* If you encounter an error related to
-/tidyverse/stringi/libicui18n.so.58/, try reinstalling =stringi= locally
-
-#+begin_src sh
-mamba remove r-stringi r-tidyverse
-R -e 'install.packages("stringi")'
-mamba install r-tidyverse
-#+end_src
-
-To restart the workflow from where it failed, just run the same command again.
+See [[Known issues]] and https://github.com/thackl/detectEVE/issues for questions,
+problems or feedback.
 
 ** Output
 The pipeline produces the following final files in =results/=:
@@ -52,7 +36,12 @@ The pipeline produces the following final files in =results/=:
 
 [[file:workflow/detectEVE-output-example.png]]
 
-** Workflow overview
+** Workflow overview and background
+detectEVE is based on the EVE search strategy developed by S. Lequime and
+previously used in publications ...
+
+The current workflow involves the following steps:
+
 [[file:workflow/detectEVE-workflow.png]]
 
 ** Advanced database setup
@@ -60,11 +49,13 @@ The pipeline produces the following final files in =results/=:
 If you need *databases in a different location* you can adjust =db_dir= in
 =config.yaml= to whatever suits your system.
 
-If you prefer to *handle downloads manually or use existing files*, you can copy
-any file you don't want to download automatically into the =databases/=
-subfolder (or whatever =config.yaml/db_dir= you specified) before running
-=--setup-databases=. Note though, all but the final diamond-formatted database
-files will be deleted from =databases/= at the end of the setup phase.
+If you prefer to *handle downloads manually or use existing files*, copy any
+file you don't want detectEVE to download automatically into =databases/= (or
+the respective =config.yaml/db_dir=) before running =--setup-databases=.
+
+Note though, unless you add =--notemp= to the =--snake=-arguments, all but the
+final diamond-formatted database files will be deleted from =databases/= at the
+end of the setup phase.
 
 #+begin_src sh
 cd databases/
@@ -84,9 +75,14 @@ tar -xzf taxdump.tar.gz nodes.dmp names.dmp
 #+end_src
 
 
-** Background
-detectEVE is based on the EVE search strategy developed by S. Lequime and
-previously used in publications ...
+** Known issues
+*tidyverse stringi libicui*
+If you encounter an error related to /tidyverse/stringi/libicui18n.so.58/, try
+reinstalling =stringi= locally. To restart the workflow from where it failed,
+just run the same command again.
 
-
-
+#+begin_src sh
+mamba remove r-stringi r-tidyverse
+R -e 'install.packages("stringi")'
+mamba install r-tidyverse
+#+end_src
