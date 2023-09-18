@@ -1,6 +1,6 @@
 ** Install and use
 
-*1. Download and install workflow*
+*Download workflow and dependencies, and setup databases*
 
 #+begin_src sh
 git clone https://github.com/thackl/detectEVE
@@ -10,17 +10,14 @@ cd detectEVE
 mamba create -n detectEVE
 mamba activate detectEVE
 mamba env update --file workflow/envs/env.yaml
-#+end_src
 
-*2. Setup databases*
-
-#+begin_src sh
-# download and cluster rvdb
-# download uniref50 for retroblast
+# download and prepare rvdb and uniref50
 ./detectEVE --setup-databases
 #+end_src
 
-*3. Analyse genomes*
+See [[Advanced database setup]] for alternatives and customization of databases.
+
+*Analyse genomes*
 #+begin_src sh
 # from files
 ./detectEVE *.fasta
@@ -55,8 +52,37 @@ The pipeline produces the following final files in =results/=:
 
 [[file:workflow/detectEVE-output-example.png]]
 
-** Workflow
+** Workflow overview
 [[file:workflow/detectEVE-workflow.png]]
+
+** Advanced database setup
+
+If you need *databases in a different location* you can adjust =db_dir= in
+=config.yaml= to whatever suits your system.
+
+If you prefer to *handle downloads manually or use existing files*, you can copy
+any file you don't want to download automatically into the =databases/=
+subfolder (or whatever =config.yaml/db_dir= you specified) before running
+=--setup-databases=. Note though, all but the final diamond-formatted database
+files will be deleted from =databases/= at the end of the setup phase.
+
+#+begin_src sh
+cd databases/
+
+# Latest RVDB
+url=https://rvdb-prot.pasteur.fr/ && 
+db=$(curl -fs $url | grep -oPm1 'files/U-RVDBv[0-9.]+-prot.fasta.xz')
+curl $url/$db -o rvdb100.faa.xz
+
+# UniRef50
+wget https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref50/uniref50.fasta.gz
+
+# NCBI taxonomy stuff
+wget https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
+wget https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz
+tar -xzf taxdump.tar.gz nodes.dmp names.dmp
+#+end_src
+
 
 ** Background
 detectEVE is based on the EVE search strategy developed by S. Lequime and

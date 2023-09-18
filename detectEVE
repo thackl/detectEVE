@@ -21,8 +21,9 @@ Options:
   -s --snake ARGS       additional arguments to pass through to snakemake
                         [default: --cores all --keep-going]
 
-  --setup-databases     download and prepare reference databases. This can take a few
-                        hours. Configure paths in config.yaml.
+  --setup-databases     download and prepare reference databases. This can take a
+                        few hours. Configure paths in config.yaml. See documentation
+                        for alternative database setup options.
 
   -h --help             Show this screen.
   --version             Show version.
@@ -39,7 +40,7 @@ import sys
 import re
 from docopt import docopt
 
-opt = docopt(__doc__, version='detectEVE v0.9.0', options_first=True)
+opt = docopt(__doc__, version='detectEVE v0.9.1', options_first=True)
 print(opt)
 
 # establish snakemake workflow and out dir
@@ -60,7 +61,7 @@ if opt["--setup-databases"]:
 gd=os.path.join(out, "genomes/")
 os.makedirs(gd, exist_ok=True)
 
-with open(f'{out}/genomes.tsv', "w") as f:
+with open(f'{out}/accessions.tsv', "w") as f:
     f.write("#accession\n")
     if opt["--accessions"]:
         f.writelines(opt["--accessions"])
