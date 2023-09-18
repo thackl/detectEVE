@@ -18,13 +18,14 @@ if not os.path.isabs(dbs):
 
 # read accessions for genome download
 def acc():
-    df = pd.read_csv("genomes.tsv", sep="\t")
-    tsv_acc = df['#accession'].tolist()
+    if(os.path.exists("accessions.tsv")):
+        df = pd.read_csv("accessions.tsv", sep="\t")
+        tsv_acc = df['#accession'].tolist()
 
-    fna_acc = glob.glob("genomes/*.fna")
-    fna_acc = [x.removeprefix("genomes/").removesuffix(".fna") for x in fna_acc]
+        fna_acc = glob.glob("genomes/*.fna")
+        fna_acc = [x.removeprefix("genomes/").removesuffix(".fna") for x in fna_acc]
 
-    return list(set(tsv_acc + fna_acc))
+        return list(set(tsv_acc + fna_acc))
 
 ## Pseudo-rules
 rule all:
@@ -102,14 +103,14 @@ rule extract_validatEVEs:
 
 
 
-## databases -----------------------------------------------------------------##
+## databases downloads ------------------------------------------------------------##
 rule download_ncbi_taxonomy:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
     output:
         targz=temp("{dbs}/taxdump.tar.gz"),
-        nodes="{dbs}/nodes.dmp",
-        names="{dbs}/names.dmp"
+        nodes=temp("{dbs}/nodes.dmp"),
+        names=temp("{dbs}/names.dmp")
     shell:
         "curl https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz -o {output.targz}\n"
         "cd {dbs}/ && tar -xzf taxdump.tar.gz nodes.dmp names.dmp"
@@ -117,36 +118,41 @@ rule download_ncbi_taxonomy:
 rule download_ncbi_acc2tax:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
-    output: "{dbs}/ncbi-acc2tax.gz"
+    output: temp("{dbs}/prot.accession2taxid.FULL.gz")
     shell: "curl https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz -o {output}"
 
-rule download_nr:
-    # a bit dirty to prevent mulitple downloads to run at same time
-    threads: workflow.cores * 0.60
-    output: "{dbs}/nr.faa.gz"
-    shell: "curl https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz -o nr.faa.gz"
-
-rule setup_nr:
-    input:
-        faagz="{dbs}/nr.faa.gz",
-        mapgz="{dbs}/ncbi-acc2tax.gz",
-        nodes="{dbs}/nodes.dmp",
-        names="{dbs}/names.dmp",
-    output:
-        dmnd="{dbs}/nr.dmnd"
-    shell:
-        'diamond makedb --in {input.faagz} --db {output.dmnd} --taxonmap {input.mapgz} --taxonnodes {input.nodes} --taxonnames {input.names}'
-           
+      
 rule download_uniref:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
-    output: "{dbs}/uniref50.fasta.gz"
+    output: temp("{dbs}/uniref50.fasta.gz")
     shell:
         "curl https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref50/uniref50.fasta.gz -o {output}"
          
+
+rule download_rvdb:
+    # a bit dirty to prevent mulitple downloads to run at same time
+    threads: workflow.cores * 0.60
+    output: temp("{dbs}/rvdb100.faa.xz"),  # do not mark temp(), could be userspecified location
+    shell:
+        """
+        set +o pipefail;
+        url=https://rvdb-prot.pasteur.fr/
+        db=$(curl -fs $url | grep -oPm1 'files/U-RVDBv[0-9.]+-prot.fasta.xz')
+        curl $url/$db -o {output}
+        """
+
+## DEPRECATED - work with NR
+# rule download_nr:
+#     # a bit dirty to prevent mulitple downloads to run at same time
+#     threads: workflow.cores * 0.60
+#     output: temp("{dbs}/nr.faa.gz")
+#     shell: "curl https://ftp.ncbi.nlm.nih.gov/blast/db/FASTA/nr.gz -o nr.faa.gz"
+
+## databases prep ------------------------------------------------------------##
 rule setup_uniref:
     input:
-        faagz="{dbs}/uniref50.fasta.gz",
+        faagz="{dbs}/uniref50.fasta.gz", # do not mark temp(), could be userspecified location
         nodes="{dbs}/nodes.dmp",
         names="{dbs}/names.dmp"
     output:
@@ -162,22 +168,18 @@ rule setup_uniref:
         'diamond makedb --in {input.faagz} --db {output.dmnd}'
         ' --taxonmap {output.taxonmap} --taxonnodes {input.nodes} --taxonnames {input.names}'
 
-rule download_rvdb:
+rule unpack_rvdb:
     # a bit dirty to prevent mulitple downloads to run at same time
-    threads: workflow.cores * 0.60
+    input:
+        xz="{dbs}/rvdb100.faa.xz",
     output:
-        xz=temp("{dbs}/rvdb100.faa.xz"),
         faa=temp("{dbs}/rvdb100.faa")
     shell:
         """
-        set +o pipefail;
-        url=https://rvdb-prot.pasteur.fr/
-        db=$(curl -fs $url | grep -oPm1 'files/U-RVDBv[0-9.]+-prot.fasta.xz')
-        curl $url/$db -o {output.xz}
         # unpack
-        xz -cd {output.xz} | seqkit seq -m 60 - | seqkit rmdup -s - | perl -pe 's/^>(acc\|\w+\|)([^|]+)/>$2 $1$2/' > {output.faa}
+        xz -cd {input.xz} | seqkit seq -m 60 - | seqkit rmdup -s - | perl -pe 's/^>(acc\|\w+\|)([^|]+)/>$2 $1$2/' > {output.faa}
         """
-
+        
 # 16GB RAM should suffice: "Approximated maximum memory consumption: 10179M"
 rule cluster_rvdb:
     input:
@@ -185,7 +187,7 @@ rule cluster_rvdb:
     output:
         faa=temp("{dbs}/rvdb80.faa"),
         cls=temp("{dbs}/rvdb80.faa.clstr"),
-	faagz="{dbs}/rvdb80.faa.gz"
+	faagz=temp("{dbs}/rvdb80.faa.gz")
     threads: workflow.cores
     shell:
         """
@@ -193,11 +195,12 @@ rule cluster_rvdb:
 	gzip -k {output.faa}
         """
 
-rule download_rvdb_taxonomy:
+rule prep_rvdb_taxonomy:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
     input:
-        "{dbs}/rvdb80.faa"
+        faa="{dbs}/rvdb80.faa",
+        mapgz="{dbs}/prot.accession2taxid.FULL.gz"
     output:
         acc=temp("{dbs}/rvdb80-acc.tsv"),
         tax=temp("{dbs}/rvdb80-acc2tax.tsv"),
@@ -205,26 +208,10 @@ rule download_rvdb_taxonomy:
     threads: 10
     shell:
         """
-        grep '^>' {input} | cut -f3 -d'|' > {output.acc} 
-        curl https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz |
-        csvtk -tT grep -j {threads} -P {output.acc} > {output.tax}
+        grep '^>' {input.faa} | cut -f3 -d'|' > {output.acc} 
+        csvtk -tT grep -j {threads} -P {output.acc} {input.mapgz} > {output.tax}
         gzip -k {output.tax}
         """
-
-# DEPRECATED - can get taxinfo from taxified diamond DB
-# rule taxify_rvdb:
-#     input:
-#         faa="{dbs}/rvdb80r.faa",
-#         tax="{dbs}/rvdb80-acc2tax.tsv"
-#     output:
-#         faa=temp("{dbs}/rvdb80.faa"),
-#         gz="{dbs}/rvdb80.faa.gz"
-#     threads: 10
-#     shell:
-#         """
-#         seqkit replace -j {threads} -p 'acc\\|[^\\|]+\\|([^\\|]+).*' -r '${{1}} ${{0}} taxid={{kv}}' -k {input.tax} {input.faa} -m NA > {output.faa}
-#         gzip -k {output.faa}
-#         """
 
 rule setup_rvdb:
     input:
@@ -255,3 +242,15 @@ rule setup_retrodb:
         zcat {input.rvdb_faagz} {input.uniref_faagz} |
         diamond makedb --db {output.dmnd} --taxonmap {output.taxgz} --taxonnodes {input.nodes} --taxonnames {input.names}
         """
+
+## DEPRECATED
+# rule setup_nr:
+#     input:
+#         faagz="{dbs}/nr.faa.gz",
+#         mapgz="{dbs}/prot.accession2taxid.FULL.gz",
+#         nodes="{dbs}/nodes.dmp",
+#         names="{dbs}/names.dmp",
+#     output:
+#         dmnd="{dbs}/nr.dmnd"
+#     shell:
+#         'diamond makedb --in {input.faagz} --db {output.dmnd} --taxonmap {input.mapgz} --taxonnodes {input.nodes} --taxonnames {input.names}'
