@@ -44,8 +44,16 @@ rule download_genome:
     output: "genomes/{asm}.fna"
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
+    # I tried ftp before but not all accessions seem to be there (e.g. Cafeteria VLTM01, ...)
     shell:
-        "(cd genomes && {scripts}/download-ncbi-genomes.pl {wildcards.asm})"
+        """(
+        set +o pipefail;
+        url=$(
+            curl "https://www.ncbi.nlm.nih.gov/Traces/wgs/{wildcards.asm}?display=download" |
+            grep -oP 'https://sra-download.ncbi.nlm.nih.gov/[^"]*.fsa_nt.gz' |
+            tail -n1) # the newest version
+        curl $url | gzip -cd > {output})
+        """
 
 ## analysis -----------------------------------------------------------------##
 rule search_assemblies:
