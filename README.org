@@ -18,24 +18,13 @@ mamba env update --file workflow/envs/env.yaml
 ./detectEVE -a ACC [ACC ...]    # download and analyze NCBI WGS genomes
 #+end_src
 
+See [[https://www.ncbi.nlm.nih.gov/Traces/wgs/][NCBI SRA WGS]] for downloadable accessions. Downloaded genomes can be found at
+=genomes/<accession>.fna=.
 
 See [[Advanced database setup]] for alternatives and customization of databases.
 
-For *accessions*, the respective genome fasta files automatically be downloaded
- from NCBI SRA WGS to =genomes/<accession>.fna=. See
- https://www.ncbi.nlm.nih.gov/Traces/wgs/, for example, QMGA01 for the
- bottlenose dolphin.
-
-If you encounter an error related to /tidyverse/stringi/libicui18n.so.58/, try
-reinstalling =stringi= locally. To restart the workflow from where it failed,
-just run the same command again.
-
-#+begin_src sh
-mamba remove r-stringi r-tidyverse
-R -e 'install.packages("stringi")'
-mamba install r-tidyverse
-#+end_src
-
+See [[Known issues]] and https://github.com/thackl/detectEVE/issues for questions,
+problems or feedback.
 
 ** Output
 The pipeline produces the following final files in =results/=:
@@ -47,7 +36,12 @@ The pipeline produces the following final files in =results/=:
 
 [[file:workflow/detectEVE-output-example.png]]
 
-** Workflow overview
+** Workflow overview and background
+detectEVE is based on the EVE search strategy developed by S. Lequime and
+previously used in publications ...
+
+The current workflow involves the following steps:
+
 [[file:workflow/detectEVE-workflow.png]]
 
 ** Advanced database setup
@@ -81,9 +75,14 @@ tar -xzf taxdump.tar.gz nodes.dmp names.dmp
 #+end_src
 
 
-** Background
-detectEVE is based on the EVE search strategy developed by S. Lequime and
-previously used in publications ...
+** Known issues
+*tidyverse stringi libicui*
+If you encounter an error related to /tidyverse/stringi/libicui18n.so.58/, try
+reinstalling =stringi= locally. To restart the workflow from where it failed,
+just run the same command again.
 
-
-
+#+begin_src sh
+mamba remove r-stringi r-tidyverse
+R -e 'install.packages("stringi")'
+mamba install r-tidyverse
+#+end_src

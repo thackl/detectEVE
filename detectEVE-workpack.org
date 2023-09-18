@@ -50,7 +50,7 @@
   - [X] document in README
   - [ ] test setup, custom DBs, ...
 
-- [ ] summarize output of multiple genomes
+- [X] summarize output of multiple genomes
 - [ ] summarize across runs?
 
 - [ ] conda/mamba for entire package (not just deps)
@@ -58,3 +58,4 @@
 - [ ] do we want place/download ready-to-go databases on figshare, rather than
   setting them up from scratch on every install? Figshare might be robuster, but
   needs us to keep databases up-to-date
+  
