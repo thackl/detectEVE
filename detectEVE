@@ -12,23 +12,37 @@ Please cite:
   File Manipulation". PLOS ONE 11(10): e0163962 (2016) doi:10.1371/journal.pone.0163962
 
 Usage:
-  detectEVE [options] (FASTA... | -a ACC...)
+  detectEVE [options] [<in.fa> ...]    # analyze fasta files
+  detectEVE [options] -a acc.csv       # analyze NCBI accession table
+  detectEVE [options] -A acc,acc       # analyze NCBI accession list
+
+  # or combine local fastas and remote accessions
+  detectEVE [options] [(-a acc.csv | -A acc,acc)] [<in.fa> ...]
+
+  # download and prep databases
   detectEVE --setup-databases [--snake ARGS] 
 
 Options:
-  -a --accessions ACC   NCBI genome accessions to download and scan
-  -o --out OUT          output directory [default: detectEVE-DATE]
-  -s --snake ARGS       additional arguments to pass through to snakemake
-                        [default: --cores all --keep-going]
+  -a --acc-csv acc.csv   Comma-separated table with NCBI WGS genome accessions in
+                         first column. First line is ignored! Works with tables
+                         downloaded from https://www.ncbi.nlm.nih.gov/Traces/wgs/.
+                         genomes are temporarily downloaded to `genomes/<acc>.fna`.
+                         Add `--notemp` to `--snake`-args to keep all downloads.
+  -A --acc-list acc,acc  Comma-separated string of NCBI genome accessions.
+                         Otherwise same as `--acc-csv`.
+  -o --out out           Output directory [default: detectEVE-%Y%m%d-%H%M%S]
+                         
+  --setup-databases      Download and prepare reference databases. This can take a
+                         few hours. Configure paths in config.yaml. See documentation
+                         for alternative database setup options.
+                         
+  -s --snake args        Additional arguments to pass through to snakemake
+                         [default: --cores all --keep-going]
+                         
+  -h --help              Show this screen.
+  --version              Show version.
 
-  --setup-databases     download and prepare reference databases. This can take a
-                        few hours. Configure paths in config.yaml. See documentation
-                        for alternative database setup options.
-
-  -h --help             Show this screen.
-  --version             Show version.
-
-Support:
+Documentation & Support:
   https://github.com/thackl/detectEVE
 """
 
@@ -40,12 +54,14 @@ import sys
 import re
 from docopt import docopt
 
-opt = docopt(__doc__, version='detectEVE v0.9.1', options_first=True)
-print(opt)
+if len(sys.argv) == 1:
+    sys.argv.append('-h')
+
+opt = docopt(__doc__, version='detectEVE v0.9.3', options_first=True)
 
 # establish snakemake workflow and out dir
-out = os.path.abspath(opt["--out"])
-out = out.replace("detectEVE-DATE", time.strftime("detectEVE-%Y%m%d-%H%M%S"))
+out = time.strftime(opt["--out"])
+out = os.path.abspath(out)
 
 # start workflow
 wf_dir  = os.path.dirname(os.path.abspath(__file__))
@@ -58,17 +74,19 @@ if opt["--setup-databases"]:
 
 
 # prep working dir and input
-gd=os.path.join(out, "genomes/")
-os.makedirs(gd, exist_ok=True)
+genome_dir=os.path.join(out, "genomes/")
+os.makedirs(genome_dir, exist_ok=True)
 
-with open(f'{out}/accessions.tsv', "w") as f:
-    f.write("#accession\n")
-    if opt["--accessions"]:
-        f.writelines(opt["--accessions"])
+if opt["--acc-csv"]:
+    os.symlink(os.path.abspath(opt["--acc-csv"]), f'{out}/accessions.csv')
+elif opt["--acc-list"]:
+    with open(f'{out}/accessions.csv', "w") as f:
+        f.write("#accession\n")
+        f.writelines(opt["--acc-list"].split(","))
 
-if opt["FASTA"]:
-    for fa in opt["FASTA"]:
-        os.symlink(os.path.abspath(fa), os.path.join(gd, os.path.basename(fa)))
+if opt["<in.fa>"]:
+    for fa in opt["<in.fa>"]:
+        os.symlink(os.path.abspath(fa), os.path.join(genome_dir, os.path.basename(fa)))
 
 cmd='snakemake' + f' --directory {out} {opt["--snake"]} --config wf_dir={wf_dir}'
 print(cmd)

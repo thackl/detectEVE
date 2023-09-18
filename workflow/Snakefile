@@ -20,12 +20,15 @@ if not os.path.isabs(dbs):
 def acc():
     if(os.path.exists("accessions.tsv")):
         df = pd.read_csv("accessions.tsv", sep="\t")
-        tsv_acc = df['#accession'].tolist()
+        tsv_acc = df.iloc[:, 0].tolist()
 
         fna_acc = glob.glob("genomes/*.fna")
         fna_acc = [x.removeprefix("genomes/").removesuffix(".fna") for x in fna_acc]
 
         return list(set(tsv_acc + fna_acc))
+    else:
+        return list()
+    
 
 ## Pseudo-rules
 rule all:
