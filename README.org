@@ -12,10 +12,15 @@ mamba env update --file workflow/envs/env.yaml
 
 # run detectEVE
 ./detectEVE -h                  # show help
-./detectEVE --setup-databases   # download and prep rvdb and uniref50
+./detectEVE [options] [<in.fa> ...]    # analyze local fasta files
+./detectEVE [options] -a acc.csv       # download & analyze NCBI accession table
+./detectEVE [options] -A acc,acc       # download & analyze NCBI accession list
 
-./detectEVE *.fasta             # analyze local genomes
-./detectEVE -a ACC [ACC ...]    # download and analyze NCBI WGS genomes
+# or combine local fasta files and remote accessions
+./detectEVE [options] [(-a acc.csv | -A acc,acc)] [<in.fa> ...]
+
+# download and prep databases
+./detectEVE --setup-databases [--snake ARGS] 
 #+end_src
 
 See [[https://www.ncbi.nlm.nih.gov/Traces/wgs/][NCBI SRA WGS]] for downloadable accessions. Downloaded genomes can be found at
