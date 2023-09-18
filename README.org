@@ -11,10 +11,10 @@ mamba activate detectEVE
 mamba env update --file workflow/envs/env.yaml
 
 # run detectEVE
-./detectEVE -h                  # show help
-./detectEVE [options] [<in.fa> ...]    # analyze local fasta files
-./detectEVE [options] -a acc.csv       # download & analyze NCBI accession table
-./detectEVE [options] -A acc,acc       # download & analyze NCBI accession list
+./detectEVE -h                       # show help
+./detectEVE [options] [<in.fa> ...]  # analyze local fasta files
+./detectEVE [options] -a acc.csv     # download & analyze NCBI accession table
+./detectEVE [options] -A acc,acc     # download & analyze NCBI accession list
 
 # or combine local fasta files and remote accessions
 ./detectEVE [options] [(-a acc.csv | -A acc,acc)] [<in.fa> ...]

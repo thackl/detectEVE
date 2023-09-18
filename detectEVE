@@ -12,15 +12,12 @@ Please cite:
   File Manipulation". PLOS ONE 11(10): e0163962 (2016) doi:10.1371/journal.pone.0163962
 
 Usage:
-  detectEVE [options] [<in.fa> ...]    # analyze localfasta files
-  detectEVE [options] -a acc.csv       # download & analyze NCBI accession table
-  detectEVE [options] -A acc,acc       # download & analyze NCBI accession list
-
-  # or combine local fasta files and remote accessions
+  detectEVE [options] [<in.fa> ...]  # analyze localfasta files
+  detectEVE [options] -a acc.csv     # download & analyze NCBI accession table
+  detectEVE [options] -A acc,acc     # download & analyze NCBI accession list
   detectEVE [options] [(-a acc.csv | -A acc,acc)] [<in.fa> ...]
 
-  # download and prep databases
-  detectEVE --setup-databases [--snake ARGS] 
+  detectEVE --setup-databases [--snake ARGS] # download and prep databases
 
 Options:
   -a --acc-csv acc.csv   Comma-separated table with NCBI WGS genome accessions in
