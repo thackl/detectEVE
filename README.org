@@ -23,8 +23,12 @@ mamba env update --file workflow/envs/env.yaml
 ./detectEVE --setup-databases [--snake ARGS] 
 #+end_src
 
-See [[https://www.ncbi.nlm.nih.gov/Traces/wgs/][NCBI SRA WGS]] for downloadable accessions. Downloaded genomes can be found at
-=genomes/<accession>.fna=.
+See [[https://www.ncbi.nlm.nih.gov/Traces/wgs/][NCBI SRA WGS]] for downloadable accessions. Exported csv tables from the
+Sequence Set Browser can be directly used with detectEVE (=-a
+wgs_selector.csv=). Genomes will be downloaded to =genomes/<accession>.fna=.
+
+Note, by default, downloaded genomes will be removed again automatically after
+being scanned. If you want to keep them, add =--notemp= to =--snake=-args.
 
 See [[Advanced database setup]] for alternatives and customization of databases.
 

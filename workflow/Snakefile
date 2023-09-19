@@ -44,7 +44,7 @@ rule setup:
     
 ## genome download ----------------------------------------------------------##
 rule download_genome:
-    output: "genomes/{asm}.fna"
+    output: temp("genomes/{asm}.fna")
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
     # I tried ftp before but not all accessions seem to be there (e.g. Cafeteria VLTM01, ...)
