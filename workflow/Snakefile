@@ -18,16 +18,15 @@ if not os.path.isabs(dbs):
 
 # read accessions for genome download
 def acc():
+    tsv_acc = []
     if(os.path.exists("accessions.csv")):
         df = pd.read_csv("accessions.csv", sep=",")
         tsv_acc = df.iloc[:, 0].tolist()
 
-        fna_acc = glob.glob("genomes/*.fna")
-        fna_acc = [x.removeprefix("genomes/").removesuffix(".fna") for x in fna_acc]
+    fna_acc = glob.glob("genomes/*.fna")
+    fna_acc = [x.removeprefix("genomes/").removesuffix(".fna") for x in fna_acc]
 
-        return list(set(tsv_acc + fna_acc))
-    else:
-        return list()
+    return list(set(tsv_acc + fna_acc))
     
 
 ## Pseudo-rules
