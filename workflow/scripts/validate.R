@@ -1,4 +1,4 @@
-#!/usr/bin/env -S Rscript --vanilla
+#!Rscript --vanilla
 # command line interface ------------------------------------------------------#
 library(docopt)
 'Validate putatEVEs based on retroblast hits
