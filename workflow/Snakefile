@@ -95,7 +95,7 @@ rule validate_putatEVEs:
         tsv="results/{asm}-validatEVEs.tsv",
         pdf="results/{asm}-validatEVEs.pdf"
     shell:
-        "{scripts}/validate.R {input} {output.tsv} {output.pdf}"
+        "Rscript --vanilla {scripts}/validate.R {input} {output.tsv} {output.pdf}"
 
 rule extract_validatEVEs:
     input:
