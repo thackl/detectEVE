@@ -46,13 +46,14 @@ rule download_genome:
     output:
         fna=temp("genomes/{asm}.fna"),
         htm=temp("genomes/{asm}.htm")
+    log: "genomes/{asm}.log"
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores * 0.60
     # I tried ftp before but not all accessions seem to be there (e.g. Cafeteria
     # VLTM01, ...)  Multiple links are split genomes, and should be concatenated
     # (e.g. NIUR01.1.fsa_nt.gz, NIUR01.2.fsa_nt.gz, ...)
     shell:
-        "{scripts}/download-traces.sh {wildcards.asm} {output.htm} > {output.fna}"
+        "{scripts}/download-traces.sh {wildcards.asm} {output.htm} > {output.fna} 2> {log}"
 
 ## analysis -----------------------------------------------------------------##
 rule search_assemblies:

@@ -95,6 +95,9 @@ print(cmd)
 subprocess.run(cmd, shell=True, cwd=wf_dir)
 
 # summary - quick and somewhat dirty summary
+p = subprocess.run(f'cat {genome_dir}/*.log | grep -c "^Bad accession"',
+                   capture_output=True, shell=True, text=True)
+n_bad_accs = int(p.stdout.rstrip())
 n_searches = len(glob.glob('results/*-search.o6', root_dir=out))
 out_files = glob.glob('results/*-validatEVEs.tsv', root_dir=out)
 
@@ -108,4 +111,6 @@ for of in out_files:
         n_low = n_low + sum(1 for match in re.finditer(r"\tlow\n", contents))
     
 print("\ndetectEVE run complete:")
+if n_bad_accs > 0:
+    print(f'{n_bad_accs} accessions failed to download, see logs for details [{genome_dir}]')
 print(f"{n_searches} genomes scanned, {n_high} high and {n_low} low confidence EVE hits found")
