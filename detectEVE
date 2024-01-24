@@ -76,7 +76,7 @@ os.makedirs(genome_dir, exist_ok=True)
 if opt["--acc-csv"]:
     csv=os.path.abspath(opt["--acc-csv"])
     if not csv == f'{out}/accessions.csv':
-        os.symlink(csv, f'{out}/accessions.csv')
+        os.system(f'cp {csv} {out}/accessions.csv')
         
 elif opt["--acc-list"]:
     with open(f'{out}/accessions.csv', "w") as f:
