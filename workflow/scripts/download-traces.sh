@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Usage: download-traces.sh <acc> > out.fna
+# Usage: download-traces.sh <acc> [out.html] > out.fna
 acc=$1
 htm=${2:-$acc.html}
 url="https://www.ncbi.nlm.nih.gov/Traces/wgs/${acc}?display=download"
