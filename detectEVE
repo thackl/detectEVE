@@ -76,7 +76,7 @@ os.makedirs(genome_dir, exist_ok=True)
 if opt["--acc-csv"]:
     csv=os.path.abspath(opt["--acc-csv"])
     if not csv == f'{out}/accessions.csv':
-        os.symlink(csv, f'{out}/accessions.csv')
+        os.system(f'cp {csv} {out}/accessions.csv')
         
 elif opt["--acc-list"]:
     with open(f'{out}/accessions.csv', "w") as f:
@@ -86,7 +86,8 @@ elif opt["--acc-list"]:
 if opt["<in.fa>"]:
     for fa in opt["<in.fa>"]:
         fa_src=os.path.abspath(fa)
-        fa_dst=os.path.join(genome_dir, os.path.basename(fa))
+        fa_dst=os.path.join(genome_dir, os.path.basename(fa)) # ensure .fna suffix
+        fa_dst=os.path.splitext(fa_dst)[0]+'.fna'
         if not fa_src == fa_dst:
             os.symlink(fa_src, fa_dst)
 
