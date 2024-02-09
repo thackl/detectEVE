@@ -38,8 +38,8 @@ rule all:
 rule setup:
     input:
         f"{dbs}/uniref50.dmnd",
-        f"{dbs}/rvdb80.dmnd",
-        f"{dbs}/rvdb80-uniref50.dmnd"
+        f"{dbs}/rvdb80.dmnd"
+        #f"{dbs}/rvdb80-uniref50.dmnd"
     
 ## genome download ----------------------------------------------------------##
 rule download_genome:
@@ -58,14 +58,17 @@ rule download_genome:
 ## analysis -----------------------------------------------------------------##
 rule search_assemblies:
     input: "genomes/{asm}.fna"
-    output: "results/{asm}-search.o6"
+    output:
+        tmp=temp("results/{asm}-search-with-dups.o6"),
+        top="results/{asm}-search.o6"
     threads: workflow.cores
     shell:
         "{scripts}/diamond-chopped.sh blastx "
-        "--query {input} --out {output} --threads {threads} "
+        "--query {input} --out {output.tmp} --threads {threads} "
         "--db {dbs}/{config[search][db]} --evalue {config[search][evalue]} "
         "-W {config[search][chop_window]} -S {config[search][chop_step]} "
         "{config[search][other_args]}\n"
+        "sort -k 1,1 -k7,8g {output.tmp} | {scripts}/blast-greedy-best > {output.top}"
 
 rule clean_search_hits:
     input: "results/{asm}-search.o6"
