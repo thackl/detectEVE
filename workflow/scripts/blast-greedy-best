@@ -8,18 +8,20 @@ use Data::Dumper;
 
 GetOptions (
     "out|o=s" => sub { '-' ne $_[1] and open(STDOUT, '>', $_[1]) || die $! },
-    "overlap|p" => \(my $opt_overlap = .5),
+    "overlap|p=f" => \(my $opt_overlap = .5),
+    "keep-max|k=i" => \(my $opt_keep_max = 1),
     "help|h!" => \(my $help),
     "debug|D!" => \(my $debug),
 ) or die("Error in command line arguments\n");
 
 if ($help){
     print "Usage: blast-greedy-best < in > out\n".
-        "Keep only the highest scoring hit along the subject sequence.\n".
-        "Remove all hits that overlap a higher-scoring hit at least\n".
-        "by the specified fraction with.\n";
+        "Keep only the highest scoring hits along the subject sequence.\n".
+        "Remove all hits that overlap at least <k> higher-scoring hits\n".
+        "by the specified proportion <p>.\n";
     printf " %-19s  %s\n", "-o/--out", "write to this file [STDOUT]";
     printf " %-19s  %s\n", "-p/--overlap", "Minimum overlap as fraction of shorter sequence [$opt_overlap]";
+    printf " %-19s  %s\n", "-k/--keep-max", "Maximum highest-scoring hits per overlapping group [$opt_keep_max]";
     printf " %-19s  %s\n", "-h/--help", "show this help";
     printf " %-19s  %s\n", "-D/--debug", "show debug messages";
     exit 0;
@@ -32,20 +34,32 @@ use constant {
     ssend => 7,
     bitscore => 11
 };
-my @r;
-my @p = split("\t", scalar(<>));
+
+my @r = split("\t", scalar <>);
+my @p = [@r];
+my $k = $opt_keep_max-1;
 
 while (<>) {
     @r = split("\t", $_);
-    my $o = overlap(@p[sseqid, sstart, ssend], @r[sseqid, sstart, ssend]);
+    my $o = overlap(@{$p[0]}[sseqid, sstart, ssend], @r[sseqid, sstart, ssend]);
     if ($o < $opt_overlap){
-        print join("\t", @p);
-        @p = @r;
-    }elsif($r[bitscore] > $p[bitscore]){
-        @p = @r
+        # print and reset group
+        print join("\t", @$_) for @p;
+        @p = [@r];
+    }else{
+        # move up throw previous hits and see if bitscore is higher
+        for(my $i=@p; $i; $i--){
+            if($r[bitscore] <= $p[$i-1][bitscore] && $i <= $k){
+                splice @p, $i, 0, [@r];
+                last;
+            }
+        }
+        @p = @p[0..$k] if $#p > $k;
     }
 }
-print join("\t", @p);
+print join("\t", @$_) for @p;
+
+
 
 sub overlap{
     my ($xi, $xs, $xe, $yi, $ys, $ye) = @_;
