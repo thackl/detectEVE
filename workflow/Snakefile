@@ -63,11 +63,11 @@ rule search_assemblies:
         top="results/{asm}-search.o6"
     threads: workflow.cores
     shell:
-        "{scripts}/diamond-chopped.sh blastx "
-        "--query {input} --out {output.tmp} --threads {threads} "
-        "--db {dbs}/{config[search][db]} --evalue {config[search][evalue]} "
-        "-W {config[search][chop_window]} -S {config[search][chop_step]} "
-        "{config[search][other_args]}\n"
+        "{scripts}/diamond-chopped.sh blastx"
+        " --query {input} --out {output.tmp} --threads {threads}"
+        " --db {dbs}/{config[search][db]} {config[search][taxonlist]}"
+        " --evalue {config[search][evalue]} {config[search][other_args]}"
+        " -W {config[search][chop_window]} -S {config[search][chop_step]}\n"
         "sort -k 1,1 -k7,8g {output.tmp} | {scripts}/blast-greedy-best > {output.top}"
 
 rule clean_search_hits:
@@ -86,12 +86,24 @@ rule extract_putatEVEs:
 
 rule retrosearch_putatEVEs:
     input: "results/{asm}-putatEVEs.fna" 
-    output: "results/{asm}-retro.o6"
+    output:
+        uni="results/{asm}-retro-uni.o6",
+        vir="results/{asm}-retro-vir.o6",
+        top="results/{asm}-retro.o6"
     threads: workflow.cores
     shell:
-        "diamond blastx --query {input} --out {output} --threads {threads} "
-        "--db {dbs}/{config[retrosearch][db]} --evalue {config[retrosearch][evalue]} "
-        "{config[retrosearch][other_args]} "
+        "diamond blastx --query {input} --threads {threads}"
+        " --db {dbs}/{config[retrosearch][db]}"
+        " --evalue {config[retrosearch][evalue]}"
+        " {config[retrosearch][other_args]}"
+        " --out {output.uni}\n"
+        "diamond blastx --query {input} --threads {threads}"
+        " --db {dbs}/{config[search][db]}"
+        " --evalue {config[search][evalue]}"
+        " {config[search][other_args]}"
+        " --out {output.vir}\n"
+        "sort -k1,1 -k7,8g {output.uni} {output.vir} |"
+        " {scripts}/blast-greedy-best -k 20 > {output.top}"
 
 rule validate_putatEVEs:
     input: "results/{asm}-retro.o6"
