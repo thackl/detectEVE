@@ -51,7 +51,7 @@ my @p;
 while (<>) {
     next if /^#/; # skip comments
     chomp();
-    @r = split("\t", $_);
+    @r = split("\t", $_, -1);
     next if $r[end] - $r[start] < $opt_min_length;
     unless(@p){ # first hit
         @p = [@r];
@@ -64,7 +64,7 @@ while (<>) {
         print join("\t", @$_), "\n" for @p;
         @p = [@r];
     }else{
-        if($r[score] >= $p[0][score]){
+        if($#p < $k || $r[score] >= $p[$#p][score]){
             push @p, [@r];
             @p = sort {$b->[score] <=> $a->[score]} @p;
         }
