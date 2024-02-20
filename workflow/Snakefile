@@ -79,26 +79,38 @@ rule extract_putatEVEs:
     shell:
         "seqkit subseq --bed {input} > {output}"
 
-rule retrosearch_putatEVEs:
+rule retrosearch_putatEVEs_udb:
     input: "results/{asm}-putatEVEs.fna" 
-    output:
-        uni="results/{asm}-retro-uni.o6",
-        vir="results/{asm}-retro-vir.o6",
-        bed="results/{asm}-retro.bed"
+    output: "results/{asm}-retro-udb.o6",
     threads: workflow.cores
     shell:
         "diamond blastx --query {input} --threads {threads}"
         " --db {dbs}/{config[retrosearch][db]}"
         " --evalue {config[retrosearch][evalue]}"
         " {config[retrosearch][other_args]}"
-        " --out {output.uni}\n"
+        " --out {output}\n"
+
+rule retrosearch_putatEVEs_vdb:
+    input: "results/{asm}-putatEVEs.fna" 
+    output: "results/{asm}-retro-vdb.o6",
+    threads: workflow.cores
+    shell:
         "diamond blastx --query {input} --threads {threads}"
         " --db {dbs}/{config[search][db]}"
         " --evalue {config[search][evalue]}"
         " {config[search][other_args]}"
-        " --out {output.vir}\n"
-        "{scripts}/blast2bed -a {output.uni} {output.vir} |"
-        " {scripts}/bed-top -k 20 > {output.bed}"
+        " --out {output}\n"
+
+rule retrosearch_putatEVEs_merge:
+    input:
+        udb="results/{asm}-retro-udb.o6",
+        vdb="results/{asm}-retro-vdb.o6",
+    output:
+        bed="results/{asm}-retro.bed"
+    threads: workflow.cores
+    shell:
+        "(sed 's/$/\t__VDB__\t\t\t\t/' {input.vdb}; cat {input.udb}) |"
+        " {scripts}/blast2bed -qa | {scripts}/bed-top -k 20 > {output.bed}"
 
 rule validate_putatEVEs:
     input: "results/{asm}-retro.bed"
