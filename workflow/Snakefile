@@ -59,8 +59,8 @@ rule download_genome:
 rule search_assemblies:
     input: "genomes/{asm}.fna"
     output:
-        tmp=temp("results/{asm}-search-with-dups.o6"),
-        top="results/{asm}-search.o6"
+        tmp="results/{asm}-search.o6",
+        bed="results/{asm}-search.bed"
     threads: workflow.cores
     shell:
         "{scripts}/diamond-chopped.sh blastx"
@@ -68,28 +68,23 @@ rule search_assemblies:
         " --db {dbs}/{config[search][db]} {config[search][taxonlist]}"
         " --evalue {config[search][evalue]} {config[search][other_args]}"
         " -W {config[search][chop_window]} -S {config[search][chop_step]}\n"
-        "sort -k 1,1 -k7,8g {output.tmp} | {scripts}/blast-greedy-best > {output.top}"
+        "{scripts}/blast2bed -qa {output.tmp} |"
+        " {scripts}/bed-top -m {config[search][min_length_aa]} > {output.bed}"
 
-rule clean_search_hits:
-    input: "results/{asm}-search.o6"
-    output: "results/{asm}-search-cleaned.o6"
-    shell:
-        "uniq {input} | perl -ane 'print if $F[3] > {config[search][min_length_aa]}' > {output}"
-        
 rule extract_putatEVEs:
     input:
-        fna="genomes/{asm}.fna",
-        o6="results/{asm}-search-cleaned.o6"
+        bed="results/{asm}-search.bed",
+        fna="genomes/{asm}.fna"
     output: "results/{asm}-putatEVEs.fna"
     shell:
-        "{scripts}/blast2bed -q {input.o6} | seqkit subseq --bed /dev/fd/0 {input.fna} > {output}"
+        "seqkit subseq --bed {input} > {output}"
 
 rule retrosearch_putatEVEs:
     input: "results/{asm}-putatEVEs.fna" 
     output:
         uni="results/{asm}-retro-uni.o6",
         vir="results/{asm}-retro-vir.o6",
-        top="results/{asm}-retro.o6"
+        bed="results/{asm}-retro.bed"
     threads: workflow.cores
     shell:
         "diamond blastx --query {input} --threads {threads}"
@@ -102,11 +97,11 @@ rule retrosearch_putatEVEs:
         " --evalue {config[search][evalue]}"
         " {config[search][other_args]}"
         " --out {output.vir}\n"
-        "sort -k1,1 -k7,8g {output.uni} {output.vir} |"
-        " {scripts}/blast-greedy-best -k 20 > {output.top}"
+        "{scripts}/blast2bed -a {output.uni} {output.vir} |"
+        " {scripts}/bed-top -k 20 > {output.bed}"
 
 rule validate_putatEVEs:
-    input: "results/{asm}-retro.o6"
+    input: "results/{asm}-retro.bed"
     output:
         tsv="results/{asm}-validatEVEs.tsv",
         pdf="results/{asm}-validatEVEs.pdf"

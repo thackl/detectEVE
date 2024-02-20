@@ -1,0 +1,93 @@
+#!/usr/bin/env perl
+# Created: 09 Feb 2024
+# Author: Thomas Hackl, thackl@lim4.de
+use warnings;
+use strict;
+use Getopt::Long  qw(:config no_ignore_case bundling);
+use Data::Dumper;
+
+GetOptions (
+    "out|o=s" => sub { '-' ne $_[1] and open(STDOUT, '>', $_[1]) || die $! },
+    "overlap|p=f" => \(my $opt_overlap = .5),
+    "keep-max|k=i" => \(my $opt_keep_max = 1),
+    "min-length|m=i" => \(my $opt_min_length = 0),
+    "help|h!" => \(my $help),
+    "debug|D!" => \(my $debug),
+) or die("Error in command line arguments\n");
+
+if ($help){
+    print "Usage: bed-top < in > out\n".
+        "Keep only the highest scoring hits along the subject sequence.\n".
+        "Remove all hits that overlap at least <k> higher-scoring hits\n".
+        "by the specified proportion <p>.\n";
+    printf " %-19s  %s\n", "-o/--out", "write to this file [STDOUT]";
+    printf " %-19s  %s\n", "-p/--overlap", "minimum overlap as fraction of shorter sequence [$opt_overlap]";
+    printf " %-19s  %s\n", "-k/--keep-max", "maximum highest-scoring hits per overlapping group [$opt_keep_max]";
+    printf " %-19s  %s\n", "-m/--min-length", "drop hits shorter than this [$opt_min_length]";
+    printf " %-19s  %s\n", "-h/--help", "show this help";
+    printf " %-19s  %s\n", "-D/--debug", "show debug messages";
+    exit 0;
+}
+
+## Sidenote
+## blast encodes "-"-strand with end<start. But that messes up sorting/overlap computation
+# 1.      S-------->
+# 2. <-----S
+# 3.        S------->
+## S: start. 1 and 3 have valid overlap, but in greedy, start-sorted approach, 2 disrupts the block...
+
+use constant {
+    sid => 0,
+    start => 1,
+    end => 2,
+    name => 3,
+    score => 4
+};
+
+my $k = $opt_keep_max-1;
+my @r;
+my @p;
+
+while (<>) {
+    next if /^#/; # skip comments
+    chomp();
+    @r = split("\t", $_);
+    next if $r[end] - $r[start] < $opt_min_length;
+    unless(@p){ # first hit
+        @p = [@r];
+        next;
+    }
+    
+    my $o = overlap(@{$p[0]}[sid, start, end], @r[sid, start, end]);
+    if ($o < $opt_overlap){
+        # print and reset group
+        print join("\t", @$_), "\n" for @p;
+        @p = [@r];
+    }else{
+        if($r[score] >= $p[0][score]){
+            push @p, [@r];
+            @p = sort {$b->[score] <=> $a->[score]} @p;
+        }
+        @p = @p[0..$k] if $#p > $k;
+    }
+}
+print join("\t", @$_), "\n" for @p;
+
+
+
+sub overlap{
+    my ($xi, $xs, $xe, $yi, $ys, $ye) = @_;
+    # same id
+    $xi eq $yi || return 0;
+    # TODO: same strand - if strand hits come mixed, this messes up my one stack
+    # $xs < $xe == $ys < $ye || return 0;
+    # abs overlap
+    ($xs, $xe) = sort {$a <=> $b} ($xs, $xe);
+    ($ys, $ye) = sort {$a <=> $b} ($ys, $ye);
+    $xs <= $ye && $ys <= $xe || return 0;
+    my $o = (sort {$a <=> $b} ($xe, $ye))[0] - (sort {$a <=> $b} ($xs, $ys))[1];
+    $o > 0 || return 0;
+    # % of shorter seq
+    my ($xyshorter) =  sort {$a <=> $b} ($xe-$xs, $ye-$ys);
+    return $o / $xyshorter;
+}
