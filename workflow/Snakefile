@@ -106,12 +106,23 @@ rule retrosearch_putatEVEs_merge:
         udb="results/{asm}-retro-udb.o6",
         vdb="results/{asm}-retro-vdb.o6",
     output:
-        bed="results/{asm}-retro.bed"
+        bed=temp("results/{asm}-retro-notax.bed")
     threads: workflow.cores
     shell:
-        "(sed 's/$/\t__VDB__\t\t\t\t/' {input.vdb}; cat {input.udb}) |"
+        "(sed 's/$/\tVDB/' {input.vdb}; sed 's/$/\tUDB/' {input.udb}) |"
         " {scripts}/blast2bed -qa | {scripts}/bed-top -k 20 > {output.bed}"
 
+rule taxize_putatEVEs:
+    input: "results/{asm}-retro-notax.bed"
+    output: "results/{asm}-retro.bed"
+    threads: workflow.cores
+    shell:
+        # parse taxid to column, get lineage
+        """
+        perl -pe '($t) = /taxid[ :=](\d+)/i; $t//=""; s/$/\t$t/;' {input} |
+        taxonkit reformat -P -I 16 -a -F -f "{{k}};{{K}};{{p}};{{c}};{{o}};{{f}};{{g}};{{s}}" > {output};
+        """
+        
 rule validate_putatEVEs:
     input: "results/{asm}-retro.bed"
     output:

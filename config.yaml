@@ -6,7 +6,7 @@ search:
   min_length_aa: 83
   taxonlist: "--taxonlist 2732396,2731342"
   # expert
-  other_args: "-c1 -b6 -F15 --range-culling -k 20 --outfmt 6"
+  other_args: "-c1 -b6 -F15 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
   chop_window: 60000
   chop_step: 50000
 
@@ -14,5 +14,19 @@ retrosearch:
   db: "uniref50.dmnd"
   evalue: 1e-4
   # expert
-  other_args: "-c1 -b6 -F15 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle staxids sscinames sskingdoms skingdoms sphylums"
- 
+  other_args: "-c1 -b6 -F15 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
+
+
+# Options
+#   -b --min-bitscore-frac=<0:1>  Minimum bitscore relative to top hit per locus 
+#                                 to include hit in validation [default: 0.5]
+#   -E --eve-score-high=<0:100>   Minimum eve-score for high-confidence validatEVEs
+#                                 [default: 30]
+#   -e --eve-score-low=<0:100>    Minimum eve-score for low-confidence validatEVEs
+#                                 [default: 10]
+#   -r --retro-score-low=<0:100>  Minimum retro-score for low-confidence validatEVEs
+#                                 even if with high eve-score [default: 10]
+#   -m --maybe-score-frac=<0:1>   Relative weight of maybe-viral hints in eve-score
+#                                 computation [default: 0.2]
+validate:
+  args: ""
