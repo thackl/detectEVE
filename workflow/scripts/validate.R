@@ -1,57 +1,149 @@
 # command line interface ------------------------------------------------------#
 library(docopt)
+library(tidyverse)
 'Validate putatEVEs based on retroblast hits
 
 Usage:
-  validate.R <in.o6> <out.tsv> <out.pdf>
+  validate.R [options] <in.bed> <out.tsv> <out.pdf>
+  
+Options
+  -b --min-bitscore-frac=<0:1>  Minimum bitscore relative to top hit per locus 
+                                to include hit in validation [default: 0.5]
+  -E --eve-score-high=<0:100>   Minimum eve-score for high-confidence validatEVEs
+                                [default: 30]
+  -e --eve-score-low=<0:100>    Minimum eve-score for low-confidence validatEVEs
+                                [default: 10]
+  -r --retro-score-low=<0:100>  Minimum retro-score for low-confidence validatEVEs
+                                even if with high eve-score [default: 10]
+  -m --maybe-score-frac=<0:1>   Relative weight of maybe-viral hints in eve-score
+                                computation [default: 0.2]
 ' -> doc
 opt <- docopt(doc)
-
 # devel
-# opt[["in.o6"]] <- "results/QMGA01-retro.o6"
+#opt <- docopt(doc, "issues/17/xxy/results/QWLK01-retro.bed foo.tsv bar.tsv")
+#opt <- docopt(doc, "issues/17/anopheles-lequime-2017/results/APHL01-retro.bed foo.tsv bar.tsv")
+opt <- map_at(opt, ~str_detect(., "score"), as.numeric)
+
 # analysis --------------------------------------------------------------------#
-library(tidyverse)
-cols <- str_split("qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle staxids sscinames sskingdoms skingdoms sphylums", " ")[[1]]
-r0 <- read_tsv(opt[["in.o6"]], col_names = cols)
+cols <- str_split("locus qstart qend sseqid bitscore strand pident length mismatch gapopen sstart send evalue desc database taxid lineage", " ")[[1]]
+r0 <- read_tsv(opt[["in.bed"]], col_names = cols)
 
-# rename to Sebastians scheme                 
+# dear king philip came over for good soup though
+tidy_lineage <- function(lng, rank_order=c("d", "k", "K", "p", "c", "o", "f", "g", "s", "t")){
+	# str_match_all on NA returns matrix with one row of NA,NA
+	# no match to "" gives empty matrix, which is what we need
+	lng <- lng |> replace_na("") 
+	ss <- str_match_all(lng, "(\\b\\w)(?::|__)([^,;]+)")
+	d <- tibble(.rows= length(ss))
+	ii <- rep(seq_along(ss), map_int(ss, nrow))
+	mm <- list_c(ss)
+	kk <- factor(mm[,2])
+	vv <- mm[,3]
+	for (k in levels(kk)){
+		d[[k]] <- NA
+		d[[k]][ii[kk==k]] <- vv[kk==k]
+	}
+	relocate(d, any_of(rank_order))
+}
+
+hints <- c(
+	false="ubiquitin|collagen|heat.?shock|NEDD8",
+	retro="retro|reverse transcriptase|rna.*polymerase|transposon|transposase|RdRP",
+	viral="virus|viral|virion|endogenous|envelope|coat|capsid",
+	maybe="hypothetical|uncharacterized|glycoprotein|polyprotein"
+)
+
+tidy_hints <- function(x, hints, ignore=NULL){
+	if(!is.null(ignore)) x[ignore] <- ""
+	
+	map2_dfc(hints, names(hints), function(pattern, type){
+		w <- x |> tolower() |> str_extract(pattern)
+		tibble(
+			"{type}_hints" := w,
+		)
+	})
+}
+
+clean_desc <- function(x){
+	x |> str_remove("^\\S+\\s*") |> str_remove("^acc.*\\|") |> str_remove("(?i)taxid=\\S+")
+}
+
+stringify_table <- function(x){
+	x <- sort(x, decreasing=T)
+	str_c(names(x), " (", x,")", collapse=", ")
+}
+
+set_na <- function(x, i){x[i] <- NA; x}
+
+max_count <- function(x){
+	names(which.max(table(x, useNA = "no")))
+}
+
 r1 <- r0 |> 
-  group_by(qseqid) |> 
-  slice_min(evalue, n=10) |> 
-  mutate(
-    evidence=case_when(
-      sskingdoms == "Viruses" ~ "1 exogenous virus hit",
-      str_detect(stitle, "virus|viral|endogenous") ~ "2 eve-ish description",
-      str_detect(stitle, "hypothetical|uncharacterized") ~ "3 hypothetical protein"
-    ),
-    confidence=case_when(
-      any(str_sub(evidence, 1, 1) == "1") ~ "high",
-      any(!is.na(evidence)) ~ "low")
-    ) |> 
-  # only keep putatEVEs with at least 1 eve-ish evidence hit
-  filter(any(!is.na(confidence)))
+	mutate(
+		tidy_lineage(lineage),
+		tidy_hints(desc, hints, ignore=database=="VDB" | k == "Viruses"),
+		suggests=coalesce(
+			str_c("viral/", set_na(database, database != "VDB")),
+			str_c("retro/UDB ", set_na(K, str_detect(K, "pararnavir", negate=T))),
+			str_c("viral/UDB ", set_na(k, k != "Viruses")),
+			str_c("false-viral/", false_hints),
+			str_c("retro/", retro_hints),
+			str_c("viral/", viral_hints),
+			str_c("maybe-viral/", maybe_hints, " protein"),
+			str_c("non-viral/annotated protein of ", k)
+		),
+	) |> 
+	separate(suggests, c("suggests", "because"), sep = "/", extra = "merge") |> 
+	relocate(locus, suggests, bitscore, because, desc, database, k)
 
-# get top virus hits
-r2 <- r1 |>
-  group_by(qseqid) |> 
-  filter(!is.na(evidence) & length > 83) |> 
-  arrange(-length, evalue) |>
-  slice_head(n=1) |> 
-  arrange(confidence, evidence, skingdoms, sphylums, evalue)
 
-# plot hit overview
-#p1 <- 
-  
+r2 <- r1 |> 
+	group_by(locus) |> 
+	filter(bitscore >= opt$min_bitscore_frac * max(bitscore)) |> 
+	summarize(
+		viral_score = sum(bitscore[suggests == "viral"])/sum(bitscore) * 100,
+		maybe_score = sum(bitscore[suggests == "maybe-viral"])/sum(bitscore) * 100,
+		retro_score = sum(bitscore[suggests == "retro"])/sum(bitscore) * 100,
+		false_score = sum(bitscore[suggests == "false-viral"])/sum(bitscore) * 100,
+		eve_score = (viral_score + maybe_score * opt$maybe_score_frac - false_score) |> round(digits = 0),
+		top_evalue = evalue[1],
+		top_desc = desc[1] |> clean_desc(),
+		top_viral_desc = desc[k == "Viruses"][1] |> clean_desc(),
+		top_viral_lineage = lineage[k == "Viruses"][1],
+		max_count_phylum = max_count(p),
+		suggests = stringify_table(table(suggests)),
+		because = stringify_table(table(because)),
+		# across(ends_with("hints")	, ~stringify_table(table(.))),
+	) |> 
+	mutate(
+		confidence = case_when(
+			eve_score > opt$eve_score_low & retro_score > opt$retro_score_low ~ "low",
+			eve_score > opt$eve_score_high ~ "high",
+			eve_score > opt$eve_score_low ~ "low",
+			.default = NA)) |> 
+	filter(!is.na(confidence)) |> 
+	arrange(confidence, -eve_score) |> 
+	mutate(eve_id = sprintf("eve_%03d", row_number())) |> 
+	relocate(eve_id, confidence, eve_score, suggests, because) |> 
+	select(-viral_score, -maybe_score, -retro_score, -false_score)
+
+
 r3 <- r1 |> 
-  mutate(
-    qseqid=factor(qseqid, levels=rev(unique(r2$qseqid)))) |>
-  filter(!is.na(qseqid))
+	inner_join(select(r2, eve_id, eve_score, locus, max_count_phylum)) |> 
+	arrange(max_count_phylum, desc(eve_id)) |> 
+	mutate(eve_id = factor(eve_id, levels=unique(eve_id)))
+
+
+################################################################################
 
 p1 <- ggplot(r3) +
-  geom_point(aes(length, qseqid), size=.3, color="black") +
-  geom_point(aes(length, qseqid, shape=evidence, color=ifelse(confidence == "high", sphylums, NA)), data=r2, size=3, alpha=.7) +
+  geom_point(aes(bitscore, eve_id), size=.3, color="black") +
+  geom_point(aes(bitscore, eve_id, shape=ifelse(k == "Viruses", suggests, NA),
+  							 color=ifelse(k == "Viruses" & !str_detect(k, "unclassified"), p, NA)), size=3, alpha=.7) +
   scale_x_sqrt() + scale_color_brewer("Viral phylum", palette="Dark2", na.value="grey50")
-ggsave(opt[["out.pdf"]], p1, width=8, height=n_distinct(r1$qseqid)/10+2)
+p1
 
+ggsave(opt[["out.pdf"]], p1, width=8, height=n_distinct(r1$locus)/10+2)
 
 write_tsv(r2, opt[["out.tsv"]])
