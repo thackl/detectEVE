@@ -21,7 +21,7 @@ Options
 opt <- docopt(doc)
 # devel
 #opt <- docopt(doc, "issues/17/xxy/results/QWLK01-retro.bed foo.tsv bar.tsv")
-#opt <- docopt(doc, "issues/17/anopheles-lequime-2017/results/APHL01-retro.bed foo.tsv bar.tsv")
+#opt <- docopt(doc, "~/Code/projects/detectEVE/issues/17/anopheles-lequime-2017_rvdb-notax/results/APHL01-retro.bed foo.tsv bar.tsv")
 opt <- map_at(opt, ~str_detect(., "score"), as.numeric)
 
 # analysis --------------------------------------------------------------------#
@@ -76,7 +76,9 @@ stringify_table <- function(x){
 set_na <- function(x, i){x[i] <- NA; x}
 
 max_count <- function(x){
-	names(which.max(table(x, useNA = "no")))
+    max <- names(which.max(table(x, useNA = "no")))
+    if(is.null(max)){return(NA_character_)}
+    max
 }
 
 r1 <- r0 |> 
@@ -128,6 +130,7 @@ r2 <- r1 |>
 	relocate(eve_id, confidence, eve_score, suggests, because) |> 
 	select(-viral_score, -maybe_score, -retro_score, -false_score)
 
+write_tsv(r2, opt[["out.tsv"]])
 
 r3 <- r1 |> 
 	inner_join(select(r2, eve_id, eve_score, locus, max_count_phylum)) |> 
@@ -137,13 +140,13 @@ r3 <- r1 |>
 
 ################################################################################
 
+
 p1 <- ggplot(r3) +
   geom_point(aes(bitscore, eve_id), size=.3, color="black") +
   geom_point(aes(bitscore, eve_id, shape=ifelse(k == "Viruses", suggests, NA),
   							 color=ifelse(k == "Viruses" & !str_detect(k, "unclassified"), p, NA)), size=3, alpha=.7) +
   scale_x_sqrt() + scale_color_brewer("Viral phylum", palette="Dark2", na.value="grey50")
-p1
+height <- n_distinct(r1$locus)/10+2
+if(height >50) height <- 48
+ggsave(opt[["out.pdf"]], p1, width=8, height=)
 
-ggsave(opt[["out.pdf"]], p1, width=8, height=n_distinct(r1$locus)/10+2)
-
-write_tsv(r2, opt[["out.tsv"]])
