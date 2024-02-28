@@ -53,7 +53,7 @@ from docopt import docopt
 if len(sys.argv) == 1:
     sys.argv.append('-h')
 
-opt = docopt(__doc__, version='detectEVE v1.0.0', options_first=True)
+opt = docopt(__doc__, version='detectEVE v1.0.1', options_first=True)
 print(opt)
 # establish snakemake workflow and out dir
 out = time.strftime(opt["--out"])
