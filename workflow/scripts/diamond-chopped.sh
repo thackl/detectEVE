@@ -50,7 +50,7 @@ echo "Running diamond"
 echo ""
 echo "Unchopping diamond results"
 (set -x;
- perl -ane '($start) = $F[0] =~ /_sliding:(\d+)-(\d+)$/; $F[0] =~ s/_sliding:\d+-\d+$//; $F[6]+=$start-1, $F[7]+=$start-1; print join("\t", @F), "\n";' $o6_chopped > $out
+ perl -F"\t" -ane 'chomp(@F); ($start) = $F[0] =~ /_sliding:(\d+)-(\d+)$/; $F[0] =~ s/_sliding:\d+-\d+$//; $F[6]+=$start-1, $F[7]+=$start-1; print join("\t", @F), "\n";' $o6_chopped > $out
 )
 echo ""
 echo "Removing temporary files"
