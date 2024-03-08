@@ -75,10 +75,34 @@ rule extract_putatEVEs:
     input:
         bed="results/{asm}-search.bed",
         fna="genomes/{asm}.fna"
-    output: "results/{asm}-putatEVEs.fna"
+    output: "results/{asm}-putatEVEs-unmasked.fna"
     shell:
         "seqkit subseq --bed {input} > {output}"
 
+rule masksearch_putatEVEs:
+    input: "results/{asm}-putatEVEs-unmasked.fna" 
+    output:
+        o6="results/{asm}-mask.o6",
+        bed="results/{asm}-mask.bed"
+    threads: workflow.cores
+    shell:
+        "diamond blastx --query {input} --threads {threads}"
+        " --db {dbs}/{config[mask][db]}"
+        " --evalue {config[search][evalue]}"
+        " {config[search][other_args]}"
+        " --out {output.o6}\n"
+        "{scripts}/blast2bed -qa {output.o6} |"
+        " {scripts}/bed-top -m {config[search][min_length_aa]} > {output.bed}"
+
+rule mask_putatEVEs:
+    input:
+        fna="results/{asm}-putatEVEs-unmasked.fna",
+        bed="results/{asm}-mask.bed"
+    output: "results/{asm}-putatEVEs.fna"
+    shell:
+        "bedtools maskfasta -fi {input.fna} -bed {input.bed} -fo {output} -fullHeader"
+       
+        
 rule retrosearch_putatEVEs_udb:
     input: "results/{asm}-putatEVEs.fna" 
     output: "results/{asm}-retro-udb.o6",

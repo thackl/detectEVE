@@ -16,7 +16,10 @@ retrosearch:
   # expert
   other_args: "-c1 -b6 -F15 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
 
-
+mask:
+  db: "mask.dmnd"
+  # rest same as `search` above
+  
 # Options
 #   -b --min-bitscore-frac=<0:1>  Minimum bitscore relative to top hit per locus 
 #                                 to include hit in validation [default: 0.5]
