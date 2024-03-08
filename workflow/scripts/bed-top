@@ -10,6 +10,7 @@ GetOptions (
     "out|o=s" => sub { '-' ne $_[1] and open(STDOUT, '>', $_[1]) || die $! },
     "overlap|p=f" => \(my $opt_overlap = .5),
     "keep-max|k=i" => \(my $opt_keep_max = 1),
+    "keep-tie|t!" => \(my $opt_keep_tie = 0),
     "min-length|m=i" => \(my $opt_min_length = 0),
     "help|h!" => \(my $help),
     "debug|D!" => \(my $debug),
@@ -23,6 +24,7 @@ if ($help){
     printf " %-19s  %s\n", "-o/--out", "write to this file [STDOUT]";
     printf " %-19s  %s\n", "-p/--overlap", "minimum overlap as fraction of shorter sequence [$opt_overlap]";
     printf " %-19s  %s\n", "-k/--keep-max", "maximum highest-scoring hits per overlapping group [$opt_keep_max]";
+    printf " %-19s  %s\n", "-t/--keep-tie", "if multiple hits have same lowest accepted top score, keep all with this score [$opt_keep_tie]";
     printf " %-19s  %s\n", "-m/--min-length", "drop hits shorter than this [$opt_min_length]";
     printf " %-19s  %s\n", "-h/--help", "show this help";
     printf " %-19s  %s\n", "-D/--debug", "show debug messages";
@@ -44,7 +46,6 @@ use constant {
     score => 4
 };
 
-my $k = $opt_keep_max-1;
 my @r;
 my @p;
 
@@ -60,15 +61,26 @@ while (<>) {
     
     my $o = overlap(@{$p[0]}[sid, start, end], @r[sid, start, end]);
     if ($o < $opt_overlap){
+        if(@p > $opt_keep_max){
+            if($opt_keep_tie){
+                # lowest accept score
+                my $min_score = $p[$opt_keep_max-1][score];
+                # keep max_keep + all with same min score
+                @p = grep{$_->[score] >= $min_score}@p;
+            }else{
+                # keep max keep
+                @p = @p[0..($opt_keep_max-1)] if @p > $opt_keep_max;
+            }
+        }
         # print and reset group
         print join("\t", @$_), "\n" for @p;
         @p = [@r];
     }else{
-        if($#p < $k || $r[score] >= $p[$#p][score]){
+        if(@p < $opt_keep_max || $r[score] >= $p[$#p][score]){
             push @p, [@r];
             @p = sort {$b->[score] <=> $a->[score]} @p;
         }
-        @p = @p[0..$k] if $#p > $k;
+
     }
 }
 print join("\t", @$_), "\n" for @p;

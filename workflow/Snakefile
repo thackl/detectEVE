@@ -110,7 +110,7 @@ rule retrosearch_putatEVEs_merge:
     threads: workflow.cores
     shell:
         "(sed 's/$/\tVDB/' {input.vdb}; sed 's/$/\tUDB/' {input.udb}) |"
-        " {scripts}/blast2bed -qa | {scripts}/bed-top -k 20 > {output.bed}"
+        " {scripts}/blast2bed -qa | {scripts}/bed-top -tk 20 > {output.bed}"
 
 rule taxize_putatEVEs:
     input: "results/{asm}-retro-notax.bed"
