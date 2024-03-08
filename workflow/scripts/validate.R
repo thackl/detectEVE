@@ -7,6 +7,7 @@ Usage:
   validate.R [options] <in.bed> <out.tsv> <out.pdf>
   
 Options
+  -p --prefix=<string>          EVE ID prefix in output files.
   -b --min-bitscore-frac=<0:1>  Minimum bitscore relative to top hit per locus 
                                 to include hit in validation [default: 0.5]
   -E --eve-score-high=<0:100>   Minimum eve-score for high-confidence validatEVEs
@@ -126,7 +127,7 @@ r2 <- r1 |>
 			.default = NA)) |> 
 	filter(!is.na(confidence)) |> 
 	arrange(confidence, -eve_score) |> 
-	mutate(eve_id = sprintf("eve_%03d", row_number())) |> 
+	mutate(eve_id = sprintf("%s_EVE%03d", opt$prefix, row_number())) |> 
 	relocate(eve_id, confidence, eve_score, suggests, because) |> 
 	select(-viral_score, -maybe_score, -retro_score, -false_score)
 

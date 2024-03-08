@@ -152,17 +152,20 @@ rule validate_putatEVEs:
     output:
         tsv="results/{asm}-validatEVEs.tsv",
         pdf="results/{asm}-validatEVEs.pdf"
+    params: "{asm}"
     shell:
-        "Rscript --vanilla {scripts}/validate.R {config[validate][args]} {input} {output.tsv} {output.pdf}"
+        "Rscript --vanilla {scripts}/validate.R -p {params} {config[validate][args]} {input} {output.tsv} {output.pdf}"
 
 rule extract_validatEVEs:
     input:
         fna="results/{asm}-putatEVEs.fna",
         tsv="results/{asm}-validatEVEs.tsv"
     output: "results/{asm}-validatEVEs.fna" 
+    params: "{asm}"
     shell:
-        "cut -f1 {input.tsv} | seqkit grep -f - {input.fna} > {output}"
-
+        "cut -f6 {input.tsv} | sed '1d' | "
+        " seqkit faidx {input.fna} --infile-list - -f |"
+        " perl -pe 's/^>/sprintf(\">%s_EVE%03d \", {params}, ++$i)/e' > {output}"
 
 
 
