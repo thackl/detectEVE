@@ -255,7 +255,7 @@ rule cluster_rvdb:
     output:
         faa=temp("{dbs}/rvdb80.faa"),
         cls=temp("{dbs}/rvdb80.faa.clstr"),
-	faagz=temp("{dbs}/rvdb80.faa.gz")
+        faagz=temp("{dbs}/rvdb80.faa.gz")
     threads: workflow.cores
     shell:
         """
