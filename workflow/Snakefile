@@ -151,7 +151,7 @@ rule taxize_putatEVEs:
     shell:
         # parse taxid to column, get lineage
         r"""
-        perl -pe '($t) = /taxid[ :=](\d+)/i; $t//=""; s/$/\t$t/;' {input} |
+        perl -pe '($t) = /taxid[ :=](\d+)/i; $t//="1"; s/$/\t$t/;' {input} |
         taxonkit reformat -P -I 16 -a -F -f "{{k}};{{K}};{{p}};{{c}};{{o}};{{f}};{{g}};{{s}}" > {output};
         """
         
