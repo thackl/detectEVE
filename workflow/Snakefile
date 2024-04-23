@@ -26,7 +26,12 @@ def acc():
     fna_acc = [x.removeprefix("genomes/").removesuffix(".fna") for x in fna_acc]
 
     return list(set(tsv_acc + fna_acc))
-    
+
+if not config["mask"]["db"]:
+    ruleorder: skip_mask_putatEVEs > mask_putatEVEs
+else:
+    ruleorder: mask_putatEVEs > skip_mask_putatEVEs
+
 
 ## Pseudo-rules
 rule all:
@@ -100,7 +105,11 @@ rule mask_putatEVEs:
     output: "results/{asm}-putatEVEs.fna"
     shell:
         "bedtools maskfasta -fi {input.fna} -bed {input.bed} -fo {output} -fullHeader"
-       
+
+rule skip_mask_putatEVEs:
+    input: "results/{asm}-putatEVEs-unmasked.fna" 
+    output: "results/{asm}-putatEVEs.fna"
+    shell: "mv {input} {output}"
         
 rule retrosearch_putatEVEs_udb:
     input: "results/{asm}-putatEVEs.fna" 

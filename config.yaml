@@ -17,19 +17,20 @@ retrosearch:
   other_args: "-c1 -b6 -F15 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
 
 mask:
+  # set to "" to disable masking
   db: "mask.dmnd"
   # rest same as `search` above
   
-# Options
-#   -b --min-bitscore-frac=<0:1>  Minimum bitscore relative to top hit per locus 
-#                                 to include hit in validation [default: 0.5]
-#   -E --eve-score-high=<0:100>   Minimum eve-score for high-confidence validatEVEs
-#                                 [default: 30]
-#   -e --eve-score-low=<0:100>    Minimum eve-score for low-confidence validatEVEs
-#                                 [default: 10]
-#   -r --retro-score-low=<0:100>  Minimum retro-score for low-confidence validatEVEs
-#                                 even if with high eve-score [default: 10]
-#   -m --maybe-score-frac=<0:1>   Relative weight of maybe-viral hints in eve-score
-#                                 computation [default: 0.2]
 validate:
+  # Options
+  #   -b --min-bitscore-frac=<0:1>  Minimum bitscore relative to top hit per locus 
+  #                                 to include hit in validation [default: 0.5]
+  #   -E --eve-score-high=<0:100>   Minimum eve-score for high-confidence validatEVEs
+  #                                 [default: 30]
+  #   -e --eve-score-low=<0:100>    Minimum eve-score for low-confidence validatEVEs
+  #                                 [default: 10]
+  #   -r --retro-score-low=<0:100>  Minimum retro-score for low-confidence validatEVEs
+  #                                 even if with high eve-score [default: 10]
+  #   -m --maybe-score-frac=<0:1>   Relative weight of maybe-viral hints in eve-score
+  #                                 computation [default: 0.2]
   args: ""

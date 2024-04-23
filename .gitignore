@@ -3,5 +3,6 @@ results/*
 !results/.gitkeep
 databases/*
 !databases/.gitkeep
+!databases/mask.dmnd
 genomes/*
 !genomes/.gitkeep

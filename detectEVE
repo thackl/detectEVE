@@ -101,8 +101,6 @@ if opt["<in.fa>"]:
                 pass
             os.symlink(fa_src, fa_dst)
 
-exit()
-
 cmd='snakemake' + f' --directory {out} {opt["--snake"]} --config wf_dir={wf_dir}'
 print(cmd)
 subprocess.run(cmd, shell=True, cwd=wf_dir)
