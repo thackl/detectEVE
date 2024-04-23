@@ -36,7 +36,6 @@ else:
 ## Pseudo-rules
 rule all:
     input:
-        # check_dbs(),
         expand("results/{asm}-validatEVEs.{ext}", asm=acc(), ext=["fna", "pdf", "tsv"])
 
 rule setup:
@@ -152,7 +151,7 @@ rule taxize_putatEVEs:
         # parse taxid to column, get lineage
         r"""
         perl -pe '($t) = /taxid[ :=](\d+)/i; $t//="1"; s/$/\t$t/;' {input} |
-        taxonkit reformat -P -I 16 -a -F -f "{{k}};{{K}};{{p}};{{c}};{{o}};{{f}};{{g}};{{s}}" > {output};
+        taxonkit reformat --data-dir {dbs} -P -I 16 -a -F -f "{{k}};{{K}};{{p}};{{c}};{{o}};{{f}};{{g}};{{s}}" > {output};
         """
         
 rule validate_putatEVEs:
@@ -185,11 +184,13 @@ rule download_ncbi_taxonomy:
     threads: workflow.cores * 0.60
     output:
         targz=temp("{dbs}/taxdump.tar.gz"),
-        nodes=temp("{dbs}/nodes.dmp"),
-        names=temp("{dbs}/names.dmp")
+        nodes="{dbs}/nodes.dmp",
+        names="{dbs}/names.dmp",
+        delno="{dbs}/delnodes.dmp",
+        merge="{dbs}/merged.dmp"
     shell:
         "curl https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz -o {output.targz}\n"
-        "cd {dbs}/ && tar -xzf taxdump.tar.gz nodes.dmp names.dmp"
+        "cd {dbs}/ && tar -xzf taxdump.tar.gz nodes.dmp names.dmp delnodes.dmp merged.dmp"
 
 rule download_ncbi_acc2tax:
     # a bit dirty to prevent mulitple downloads to run at same time
