@@ -88,10 +88,20 @@ elif opt["--acc-list"]:
 if opt["<in.fa>"]:
     for fa in opt["<in.fa>"]:
         fa_src=os.path.abspath(fa)
+        if not os.path.exists(fa_src):
+            print(f"{fa_src} does not exist")
+            sys.exit()
+            
         fa_dst=os.path.join(genome_dir, os.path.basename(fa)) # ensure .fna suffix
         fa_dst=os.path.splitext(fa_dst)[0]+'.fna'
         if not fa_src == fa_dst:
+            try:
+                os.remove(fa_dst)
+            except:
+                pass
             os.symlink(fa_src, fa_dst)
+
+exit()
 
 cmd='snakemake' + f' --directory {out} {opt["--snake"]} --config wf_dir={wf_dir}'
 print(cmd)
