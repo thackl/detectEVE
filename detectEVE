@@ -32,7 +32,8 @@ Options:
                          few hours. Configure paths in config.yaml. See documentation
                          for alternative database setup options.
                          
-  -s --snake args        Additional arguments to pass through to snakemake
+  -s --snake args        Overwrite/add arguments to for snakemake. Need to be enclosed
+                         in quotes, e.g. `-s '--cores 1 --verbose --notemp'`.
                          [default: --cores all --keep-going]
                          
   -h --help              Show this screen.
@@ -40,6 +41,7 @@ Options:
 
 Documentation & Support:
   https://github.com/thackl/detectEVE
+
 """
 
 import os

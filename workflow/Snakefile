@@ -15,7 +15,6 @@ dbs=config["db_dir"]
 if not os.path.isabs(dbs):
     dbs=os.path.join(wf_dir, dbs)
 
-
 # read accessions for genome download
 def acc():
     tsv_acc = []
@@ -142,7 +141,7 @@ rule taxize_putatEVEs:
     threads: workflow.cores
     shell:
         # parse taxid to column, get lineage
-        """
+        r"""
         perl -pe '($t) = /taxid[ :=](\d+)/i; $t//=""; s/$/\t$t/;' {input} |
         taxonkit reformat -P -I 16 -a -F -f "{{k}};{{K}};{{p}};{{c}};{{o}};{{f}};{{g}};{{s}}" > {output};
         """
@@ -227,7 +226,7 @@ rule setup_uniref:
         taxonmap=temp("{dbs}/uniref50-acc2tax.tsv.gz"),
         dmnd="{dbs}/uniref50.dmnd"
     shell:
-        """
+        r"""
         ( echo -e "accession.version\ttaxid";
           gzip -cd {input.faagz} |
           perl -ne 'if(/>UniRef50_(\S+).*TaxID=(\d+)/){{print $1,"\t",$2,"\n"}}'
@@ -243,7 +242,7 @@ rule unpack_rvdb:
     output:
         faa=temp("{dbs}/rvdb100.faa")
     shell:
-        """
+        r"""
         # unpack
         xz -cd {input.xz} | seqkit seq -m 60 - | seqkit rmdup -s - | perl -pe 's/^>(acc\|\w+\|)([^|]+)/>$2 $1$2/' > {output.faa}
         """
@@ -253,32 +252,33 @@ rule cluster_rvdb:
     input:
         "{dbs}/rvdb100.faa"
     output:
-        faa=temp("{dbs}/rvdb80.faa"),
-        cls=temp("{dbs}/rvdb80.faa.clstr"),
-        faagz=temp("{dbs}/rvdb80.faa.gz")
+        faa=temp("{dbs}/rvdb80-notax.faa"),
+        cls=temp("{dbs}/rvdb80-notax.faa.clstr"),
     threads: workflow.cores
     shell:
         """
         cd-hit -c .8 -i {input} -o {output.faa} -M 16000 -T {threads}
-	gzip -k {output.faa}
         """
 
 rule prep_rvdb_taxonomy:
     # a bit dirty to prevent mulitple downloads to run at same time
-    threads: workflow.cores * 0.60
+    threads: workflow.cores
     input:
-        faa="{dbs}/rvdb80.faa",
+        faa="{dbs}/rvdb80-notax.faa",
         mapgz="{dbs}/prot.accession2taxid.FULL.gz"
     output:
         acc=temp("{dbs}/rvdb80-acc.tsv"),
         tax=temp("{dbs}/rvdb80-acc2tax.tsv"),
-        taxgz=temp("{dbs}/rvdb80-acc2tax.tsv.gz")
-    threads: 10
+        faa=temp("{dbs}/rvdb80.faa"),
+        taxgz=temp("{dbs}/rvdb80-acc2tax.tsv.gz"),
+        faagz=temp("{dbs}/rvdb80.faa.gz")
     shell:
-        """
+        r"""
         grep '^>' {input.faa} | cut -f3 -d'|' > {output.acc} 
-        csvtk -tT grep -j {threads} -P {output.acc} {input.mapgz} > {output.tax}
+        csvtk --quiet -tT grep -j {threads} -P {output.acc} {input.mapgz} > {output.tax}
+        seqkit replace -p 'acc\|[^\|]+\|([^\|]+).*' -r '${{0}} acc=${{1}} taxid={{kv}}' -k {output.tax} {input.faa} -m NA > {output.faa}
         gzip -k {output.tax}
+        gzip -k {output.faa}
         """
 
 rule setup_rvdb:
@@ -290,7 +290,9 @@ rule setup_rvdb:
     output:
         dmnd="{dbs}/rvdb80.dmnd"
     shell:
-        'diamond makedb --in {input.faagz} --db {output.dmnd} --taxonmap {input.mapgz} --taxonnodes {input.nodes} --taxonnames {input.names}'
+        """
+        diamond makedb --no-parse-seqids --in {input.faagz} --db {output.dmnd} --taxonmap {input.mapgz} --taxonnodes {input.nodes} --taxonnames {input.names}
+        """
 
 rule setup_retrodb:
     input:
