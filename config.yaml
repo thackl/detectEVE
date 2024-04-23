@@ -1,10 +1,11 @@
 db_dir: "databases" # relative to workflow base or absolute
 search:
+  # NOTE: with custom databases make sure to set: taxonlist: ""  (empty string)
   db: "rvdb80.dmnd"
+  taxonlist: "--taxonlist 2732396,2731342" # screen only for Orthornaviridae and Monodnaviridae
+  # taxonlist: "" <<< use with custom dbs that haven't been built with a diamond taxonomy !
   evalue: 1e-4
   min_length_aa: 83
-  # NOTE: with custom databases make sure to set: taxonlist: ""  (empty string)
-  taxonlist: "--taxonlist 2732396,2731342"
   # expert
   other_args: "-c1 -b6 -F15 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
   chop_window: 60000
@@ -15,11 +16,13 @@ retrosearch:
   evalue: 1e-4
   # expert
   other_args: "-c1 -b6 -F15 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
+  # devel - only retro against Anopheles
+  # other_args: "--taxonlist 7164 -c1 -b6 -F15 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
 
 mask:
   # set to "" to disable masking
-  db: "mask.dmnd"
   # rest same as `search` above
+  db: "mask.dmnd"
   
 validate:
   # Options
