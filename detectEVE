@@ -118,8 +118,8 @@ n_low = 0
 for of in out_files:
     with open(f'{out}/{of}') as f:
         contents = f.read()
-        n_high = n_high + sum(1 for match in re.finditer(r"\thigh\n", contents))
-        n_low = n_low + sum(1 for match in re.finditer(r"\tlow\n", contents))
+        n_high = n_high + sum(1 for match in re.finditer(r"\thigh\t", contents))
+        n_low = n_low + sum(1 for match in re.finditer(r"\tlow\t", contents))
     
 print("\ndetectEVE run complete:")
 if n_bad_accs > 0:
