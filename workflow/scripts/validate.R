@@ -49,7 +49,7 @@ tidy_lineage <- function(lng, rank_order=c("d", "k", "K", "p", "c", "o", "f", "g
 
 hints <- c(
 	false="ubiquitin|collagen|heat.?shock|NEDD8",
-	retro="retro|reverse transcriptase|rna.*polymerase|transposon|transposase|RdRP",
+	retro="retro|reverse transcriptase|transposon|transposase",
 	viral="virus|viral|virion|endogenous|envelope|coat|capsid",
 	maybe="hypothetical|uncharacterized|glycoprotein|polyprotein"
 )
