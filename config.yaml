@@ -7,7 +7,9 @@ search:
   evalue: 1e-4
   min_length_aa: 83
   # expert
-  other_args: "-c1 -b6 -F15 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
+  other_args: "-c1 -b6 -F15 --sensitive --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
+  # devel - sensitivity adjustments for <40% identity - see diamond options - negatively affects speed
+  # other_args: "-c1 -b6 -F15 --ultra-sensitive --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
   chop_window: 60000
   chop_step: 50000
 
@@ -15,9 +17,11 @@ retrosearch:
   db: "uniref50.dmnd"
   evalue: 1e-4
   # expert
-  other_args: "-c1 -b6 -F15 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
+  other_args: "-c1 -b6 -F15 --sensitive --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
   # devel - only retro against Anopheles
   # other_args: "--taxonlist 7164 -c1 -b6 -F15 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
+  # devel - sensitivity adjustments for <40% identity - see diamond options - negatively affects speed 
+  # other_args: "-c1 -b6 -F15 --ultra-sensitive --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
 
 mask:
   # set to "" to disable masking
