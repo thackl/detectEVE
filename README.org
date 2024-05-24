@@ -37,8 +37,7 @@ See [[Known issues]] and https://github.com/thackl/detectEVE/issues for question
 ** Output
 The pipeline produces the following final files in =results/=:
 - =<genome_id>-validatEVEs.tsv= - best hit of the EVE with evidence and confidence
-  annotation (exogenous virus: high, eve-ish description & hypothetical protein:
-  low)
+  annotation (high confidence: EVE score > 30, low confidence: EVE score > 10)
 - =<genome_id>-validatEVEs.fna= - validatEVEs nucleotide sequences
 - =<genome_id>-validatEVEs.pdf= - graphical overview of hit distribution for validatEVEs
 
@@ -46,11 +45,15 @@ The pipeline produces the following final files in =results/=:
 
 ** Workflow overview and background
 detectEVE is based on the EVE search strategy developed by S. Lequime and
-previously used in publications ...
+previously used in the following publications:
+
+- Lequime et al., 2017 https://doi.org/10.1093/ve/vew035
+- Li et al., 2022 https://doi.org/10.1093/molbev/msac190
+- Brait et al., 2023 https://doi.org/10.1093/ve/vead088
 
 The current workflow involves the following steps:
 
-[[file:workflow/detectEVE-workflow.png]]
+[[file:workflow/detectEVE_workflow.png]]
 
 ** Advanced database setup
 
@@ -76,7 +79,7 @@ curl $url/$db -o rvdb100.faa.xz
 # UniRef50
 wget https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref50/uniref50.fasta.gz
 
-# NCBI taxonomy stuff
+# NCBI taxonomy
 wget https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
 wget https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz
 tar -xzf taxdump.tar.gz nodes.dmp names.dmp
@@ -94,3 +97,7 @@ mamba remove r-stringi r-tidyverse
 R -e 'install.packages("stringi")'
 mamba install r-tidyverse
 #+end_src
+
+*diamond v2.1.9*
+diamond v2.1.9 does not output send correctly when using long-read mode (--range-culling).
+env is currently set to version 2.1.8 (=diamond ==2.1.8=), but needs to be revised in the future.
