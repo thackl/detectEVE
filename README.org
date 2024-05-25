@@ -57,7 +57,7 @@ previously used in the following publications:
 
 The current workflow involves the following steps:
 
-[[file:workflow/wf-rulegraph.png]]
+[[file:figures/wf-rulegraph.png]]
 
 ** Advanced database setup
 
