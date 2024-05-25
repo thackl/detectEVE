@@ -40,4 +40,6 @@ validate:
   #                                 even if with high eve-score [default: 10]
   #   -m --maybe-score-frac=<0:1>   Relative weight of maybe-viral hints in eve-score
   #                                 computation [default: 0.2]
+  # Example for stricter search, 75% of top-bitscore, minimum eve-score of 50
+  # args: "-b 0.75 -E 50"
   args: ""
