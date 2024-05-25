@@ -23,7 +23,8 @@ mamba env update --file workflow/envs/env.yaml
 ./detectEVE --setup-databases [--snake ARGS]
 
 # run example data
-./detectEVE -o example example/*.fna
+cd examples
+../detectEVE *.fna
 #+end_src
 
 See [[https://www.ncbi.nlm.nih.gov/Traces/wgs/][NCBI SRA WGS]] for downloadable accessions. Exported csv tables from the
