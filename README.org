@@ -89,7 +89,6 @@ wget https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz
 tar -xzf taxdump.tar.gz nodes.dmp names.dmp
 #+end_src
 
-
 ** Known issues
 *** tidyverse stringi libicui
 If you encounter an error related to /tidyverse/stringi/libicui18n.so.58/, try
