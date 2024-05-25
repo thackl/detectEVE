@@ -111,6 +111,7 @@ r2 <- r1 |>
 		false_score = sum(bitscore[suggests == "false-viral"])/sum(bitscore) * 100,
 		eve_score = (viral_score + maybe_score * opt$maybe_score_frac - false_score) |> round(digits = 0),
 		top_evalue = evalue[1],
+		top_pident = pident[1],
 		top_desc = desc[1] |> clean_desc(),
 		top_viral_desc = desc[k == "Viruses"][1] |> clean_desc(),
 		top_viral_lineage = lineage[k == "Viruses"][1],
