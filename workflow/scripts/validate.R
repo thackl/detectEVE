@@ -113,7 +113,10 @@ r2 <- r1 |>
 		top_evalue = evalue[1],
 		top_pident = pident[1],
 		top_desc = desc[1] |> clean_desc(),
-		top_viral_desc = desc[k == "Viruses"][1] |> clean_desc(),
+		# top_viral_desc = desc[k == "Viruses"][1] |> clean_desc(),
+		top_viral_desc = coalesce(
+			desc[k == "Viruses"][1] |> clean_desc(),
+			desc[database =="VDB"][1] |> clean_desc()),
 		top_viral_lineage = lineage[k == "Viruses"][1],
 		max_count_phylum = max_count(p),
 		suggests = stringify_table(table(suggests)),
