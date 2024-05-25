@@ -1,0 +1,13 @@
+* workflow figures
+
+#+begin_src sh
+# DAG
+../detectEVE --snake '-n --cores 1 --dag --quiet all' ../examples/*.fna |
+  perl -ne '$print=1 if /digraph/; $print=0 if /^{/; print if $print' |
+  dot -Tpng > wf-dag.png
+
+# rulegraph
+../detectEVE --snake '-n --cores 1 --rulegraph --quiet all' ../examples/*.fna |
+  perl -ne '$print=1 if /digraph/; $print=0 if /^{/; print if $print' |
+  dot -Tpng > wf-rulegraph.png
+#+end_src

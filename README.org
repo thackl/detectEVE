@@ -45,7 +45,7 @@ The pipeline produces the following final files in =results/=:
 - =<genome_id>-validatEVEs.fna= - validatEVEs nucleotide sequences
 - =<genome_id>-validatEVEs.pdf= - graphical overview of hit distribution for validatEVEs
 
-[[file:workflow/detectEVE-output-example.png]]
+[[file:figures/wf-example-output.png]]
 
 ** Workflow overview and background
 detectEVE is based on the EVE search strategy developed by S. Lequime and
@@ -57,7 +57,7 @@ previously used in the following publications:
 
 The current workflow involves the following steps:
 
-[[file:workflow/detectEVE_workflow.png]]
+[[file:workflow/wf-rulegraph.png]]
 
 ** Advanced database setup
 
@@ -91,7 +91,7 @@ tar -xzf taxdump.tar.gz nodes.dmp names.dmp
 
 
 ** Known issues
-*tidyverse stringi libicui*
+*** tidyverse stringi libicui
 If you encounter an error related to /tidyverse/stringi/libicui18n.so.58/, try
 reinstalling =stringi= locally. To restart the workflow from where it failed,
 just run the same command again.
@@ -102,6 +102,7 @@ R -e 'install.packages("stringi")'
 mamba install r-tidyverse
 #+end_src
 
-*diamond v2.1.9*
-diamond v2.1.9 does not output send correctly when using long-read mode (--range-culling).
-env is currently set to version 2.1.8 (=diamond ==2.1.8=), but needs to be revised in the future.
+*** diamond v2.1.9 =send= bug
+diamond v2.1.9 has a [[https://github.com/bbuchfink/diamond/issues/791][bug]] and does not output =send= correctly when using
+long-read mode (--range-culling). Since at this point v2.1.9 is the latest
+diamond version, detectEVE defaults to diamond v2.1.8 to avoid this bug.
