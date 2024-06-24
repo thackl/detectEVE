@@ -83,6 +83,19 @@ while (<>) {
 
     }
 }
+
+if(@p > $opt_keep_max){
+    if($opt_keep_tie){
+        # lowest accept score
+        my $min_score = $p[$opt_keep_max-1][score];
+        # keep max_keep + all with same min score
+        @p = grep{$_->[score] >= $min_score}@p;
+    }else{
+        # keep max keep
+        @p = @p[0..($opt_keep_max-1)] if @p > $opt_keep_max;
+    }
+}
+
 print join("\t", @$_), "\n" for @p;
 
 
