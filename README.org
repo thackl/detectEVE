@@ -1,4 +1,9 @@
-** Usage
+[[file:figures/detectEVE_icon.png]]
+
+** Introduction
+detectEVE is an open-source Snakemake tool designed for the fast and precise detection of non-retroviral endogenous viral elements (nrEVEs) in genomic assemblies, offering minimal installation requirements and high user flexibility. 
+
+** Quickstart guide
 
 #+begin_src sh
 # download workflow
@@ -27,16 +32,10 @@ cd examples
 ../detectEVE *.fna
 #+end_src
 
-See [[https://www.ncbi.nlm.nih.gov/Traces/wgs/][NCBI SRA WGS]] for downloadable accessions. Exported csv tables from the
-Sequence Set Browser can be directly used with detectEVE (=-a wgs_selector.csv=).
-Genomes will be downloaded to =genomes/<accession>.fna=.
- 
-Note, by default, downloaded genomes will be removed again automatically after
-being scanned. If you want to keep them, add =--notemp= to =--snake=-args.
+See [[https://www.ncbi.nlm.nih.gov/Traces/wgs/][NCBI SRA WGS]] for downloadable accessions. 
+** Documentation
 
-See [[Advanced database setup]] for alternatives and customization of databases.
-
-See [[Known issues]] and https://github.com/thackl/detectEVE/issues for questions, problems or feedback.
+The online documentation providing advanced setups, detailed explanations of parameters, and FAQ is located at the [[https://github.com/thackl/detectEVE/wiki][GitHub Wiki]].
 
 ** Output
 The pipeline produces the following final files in =results/=:
@@ -47,47 +46,17 @@ The pipeline produces the following final files in =results/=:
 
 [[file:figures/wf-example-output.png]]
 
-** Workflow overview and background
+** About
+
+When using the tool in published research, please cite:
+- not yet applicable
+
 detectEVE is based on the EVE search strategy developed by S. Lequime and
 previously used in the following publications:
 
 - Lequime et al., 2017 https://doi.org/10.1093/ve/vew035
 - Li et al., 2022 https://doi.org/10.1093/molbev/msac190
 - Brait et al., 2023 https://doi.org/10.1093/ve/vead088
-
-The current workflow involves the following steps:
-
-[[file:figures/wf-rulegraph.png]]
-
-** Advanced database setup
-
-If you need *databases in a different location* you can adjust =db_dir= in
-=config.yaml= to whatever suits your system.
-
-If you prefer to *handle downloads manually or use existing files*, copy any
-file you don't want detectEVE to download automatically into =databases/= (or
-the respective =config.yaml/db_dir=) before running =--setup-databases=.
-
-Note though, unless you add =--notemp= to the =--snake=-arguments, all but the
-final diamond-formatted database files will be deleted from =databases/= at the
-end of the setup phase.
-
-#+begin_src sh
-cd databases/
-
-# Latest RVDB
-url=https://rvdb-prot.pasteur.fr/ && 
-db=$(curl -fs $url | grep -oPm1 'files/U-RVDBv[0-9.]+-prot.fasta.xz')
-curl $url/$db -o rvdb100.faa.xz
-
-# UniRef50
-wget https://ftp.uniprot.org/pub/databases/uniprot/uniref/uniref50/uniref50.fasta.gz
-
-# NCBI taxonomy
-wget https://ftp.ncbi.nlm.nih.gov/pub/taxonomy/accession2taxid/prot.accession2taxid.FULL.gz
-wget https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz
-tar -xzf taxdump.tar.gz nodes.dmp names.dmp
-#+end_src
 
 ** Known issues
 *** tidyverse stringi libicui
