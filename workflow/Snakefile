@@ -72,7 +72,7 @@ rule search_assemblies:
         " --evalue {config[search][evalue]} {config[search][other_args]}"
         " -W {config[search][chop_window]} -S {config[search][chop_step]}\n"
         "{scripts}/blast2bed -qa {output.tmp} |"
-        " {scripts}/bed-top -m {config[search][min_length_aa]} > {output.bed}"
+        " {scripts}/bed-top -m {config[search][min_length_nt]} > {output.bed}"
 
 rule extract_putatEVEs:
     input:
@@ -95,7 +95,7 @@ rule masksearch_putatEVEs:
         " {config[search][other_args]}"
         " --out {output.o6}\n"
         "{scripts}/blast2bed -qa {output.o6} |"
-        " {scripts}/bed-top -m {config[search][min_length_aa]} > {output.bed}"
+        " {scripts}/bed-top -m {config[search][min_length_nt]} > {output.bed}"
 
 rule mask_putatEVEs:
     input:

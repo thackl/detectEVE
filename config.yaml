@@ -5,7 +5,7 @@ search:
   taxonlist: "--taxonlist 2732396,2731342" # screen only for Orthornaviridae and Monodnaviridae
   # taxonlist: "" <<< use with custom dbs that haven't been built with a diamond taxonomy !
   evalue: 1e-4
-  min_length_aa: 83
+  min_length_nt: 250
   # expert
   other_args: "-c1 -b6 -F15 --sensitive --max-hsps 100 --range-culling -k 20 --outfmt 6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore stitle"
   # devel - sensitivity adjustments for <40% identity - see diamond options - negatively affects speed
