@@ -44,7 +44,7 @@ The pipeline produces the following final files in =results/=:
 - =<genome_id>-validatEVEs.fna= - validatEVEs nucleotide sequences
 - =<genome_id>-validatEVEs.pdf= - graphical overview of hit distribution for validatEVEs
 
-[[file:figures/wf-example-output.png]]
+[[file:figures/wf-example-output.pdf]]
 
 ** About
 
