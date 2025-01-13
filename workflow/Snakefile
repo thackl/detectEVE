@@ -80,7 +80,18 @@ rule extract_putatEVEs:
         fna="genomes/{asm}.fna"
     output: "results/{asm}-putatEVEs-unmasked.fna"
     shell:
-        "seqkit subseq --bed {input} > {output}"
+        """
+        seqkit subseq --bed {input} > {output}
+        if ! [ -s {output} ]; then
+          echo ""
+          echo ""
+          echo "#--------------------------------------------------------------------------------------#"
+          echo "NOTE: No putatEVEs detected for [{wildcards.asm}] with current DB/sensitivity settings;"
+          echo "#--------------------------------------------------------------------------------------#"
+          echo ""
+          exit 1
+        fi;
+        """
 
 rule masksearch_putatEVEs:
     input: "results/{asm}-putatEVEs-unmasked.fna" 
@@ -161,7 +172,18 @@ rule validate_putatEVEs:
         pdf="results/{asm}-validatEVEs.pdf"
     params: "{asm}"
     shell:
-        "Rscript --vanilla {scripts}/validate.R -p {params} {config[validate][args]} {input} {output.tsv} {output.pdf}"
+        """
+        Rscript --vanilla {scripts}/validate.R -p {params} {config[validate][args]} {input} {output.tsv} {output.pdf}
+        if ! [ -s {output.tsv} ]; then
+          echo ""
+          echo ""
+          echo "#--------------------------------------------------------------------------------------#"
+          echo "NOTE: No validatEVEs detected for [{wildcards.asm}] with current validation criteria;"
+          echo "#--------------------------------------------------------------------------------------#"
+          echo ""
+          exit 1
+        fi;
+        """
 
 rule extract_validatEVEs:
     input:
