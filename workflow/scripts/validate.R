@@ -138,19 +138,24 @@ r2 <- r1 |>
 write_tsv(r2, opt[["out.tsv"]])
 
 r3 <- r1 |> 
-	inner_join(select(r2, eve_id, eve_score, locus, max_count_phylum)) |> 
-	arrange(max_count_phylum, desc(eve_id)) |> 
+	inner_join(select(r2, eve_id, eve_score, locus, max_count_phylum, confidence)) |> 
+	arrange(desc(eve_id)) |> 
 	mutate(eve_id = factor(eve_id, levels=unique(eve_id)))
 
 
 ################################################################################
 
+filtered_eves <- r3[!duplicated(r3$eve_id), ]
+confidence_colors <- setNames(ifelse(filtered_eves$confidence == "high", "black", "gray45"), filtered_eves$eve_id)
 
 p1 <- ggplot(r3) +
-  geom_point(aes(bitscore, eve_id), size=.3, color="black") +
+  geom_point(aes(bitscore, eve_id), size=.3, color="black", show.legend = TRUE) +
   geom_point(aes(bitscore, eve_id, shape=ifelse(k == "Viruses", suggests, NA),
-  							 color=ifelse(k == "Viruses" & !str_detect(k, "unclassified"), p, NA)), size=3, alpha=.7) +
-  scale_x_sqrt() + scale_color_brewer("Viral phylum", palette="Dark2", na.value="grey50")
+                 color=ifelse(k == "Viruses" & !str_detect(k, "unclassified"), p, NA)), size=3, alpha=.7) +
+  scale_x_sqrt() + scale_color_brewer("Viral phylum", palette="Dark2", na.translate = FALSE) +
+  scale_shape_manual(values = c(16,NA), labels = c("viral", "all")) +
+  guides(color = guide_legend(order = 1), shape = guide_legend(order = 2, title = "Taxonomy")) +
+  theme(legend.key = element_blank(), axis.text.y = element_text(color = confidence_colors))
 height <- n_distinct(r1$locus)/10+2
 if(height >50) height <- 48
 ggsave(opt[["out.pdf"]], p1, width=8, height=)
