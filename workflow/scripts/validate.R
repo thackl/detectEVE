@@ -4,7 +4,7 @@ library(tidyverse)
 'Validate putatEVEs based on retroblast hits
 
 Usage:
-  validate.R [options] <in.bed> <out.tsv> <out.pdf>
+  validate.R [options] <in.bed> <in.fai> <out.tsv> <out.pdf>
   
 Options
   -p --prefix=<string>          EVE ID prefix in output files.
@@ -26,8 +26,9 @@ opt <- docopt(doc)
 opt <- map_at(opt, ~str_detect(., "score"), as.numeric)
 
 # analysis --------------------------------------------------------------------#
-cols <- str_split("locus qstart qend sseqid bitscore strand pident length mismatch gapopen sstart send evalue desc database taxid lineage", " ")[[1]]
+cols <- str_split("locus qstart qend sseqid bitscore strand pident length mismatch gapopen sstart send evalue qlen slen qcovhsp desc database taxid lineage", " ")[[1]]
 r0 <- read_tsv(opt[["in.bed"]], col_names = cols)
+s0 <- read_tsv(opt[["in.fai"]], col_names = c("contig_id", "contig_length"), col_types="cn---")
 
 # dear king philip came over for good soup though
 tidy_lineage <- function(lng, rank_order=c("d", "k", "K", "p", "c", "o", "f", "g", "s", "t")){
@@ -59,7 +60,7 @@ tidy_hints <- function(x, hints, ignore=NULL){
 	
 	map2_dfc(hints, names(hints), function(pattern, type){
 		w <- x |> tolower() |> str_extract(pattern)
-		tibble(
+ 		tibble(
 			"{type}_hints" := w,
 		)
 	})
@@ -111,29 +112,37 @@ r2 <- r1 |>
 		false_score = sum(bitscore[suggests == "false-viral"])/sum(bitscore) * 100,
 		eve_score = (viral_score + maybe_score * opt$maybe_score_frac - false_score) |> round(digits = 0),
 		top_evalue = evalue[1],
-		top_pident = pident[1],
-		top_desc = desc[1] |> clean_desc(),
+                top_pident = pident[1],
+                # top_coverage = qcovhsp[1],
+                top_desc = desc[1] |> clean_desc(),
 		# top_viral_desc = desc[k == "Viruses"][1] |> clean_desc(),
 		top_viral_desc = coalesce(
 			desc[k == "Viruses"][1] |> clean_desc(),
 			desc[database =="VDB"][1] |> clean_desc()),
-		top_viral_lineage = lineage[k == "Viruses"][1],
+                top_viral_lineage = lineage[k == "Viruses"][1],
+                top_viral_coverage = round(100*length[k == "Viruses"][1]/slen[k == "Viruses"][1], 2),
 		max_count_phylum = max_count(p),
 		suggests = stringify_table(table(suggests)),
-		because = stringify_table(table(because)),
+                because = stringify_table(table(because)),
+                eve_length = qlen[1],
 		# across(ends_with("hints")	, ~stringify_table(table(.))),
 	) |> 
-	mutate(
-		confidence = case_when(
-			eve_score > opt$eve_score_low & retro_score > opt$retro_score_low ~ "low",
-			eve_score > opt$eve_score_high ~ "high",
-			eve_score > opt$eve_score_low ~ "low",
-			.default = NA)) |> 
+        mutate(
+            contig_id = str_remove(locus, "_\\d+-\\d+:[=-]$"),
+            confidence = case_when(
+		eve_score > opt$eve_score_low & retro_score > opt$retro_score_low ~ "low",
+		eve_score > opt$eve_score_high ~ "high",
+		eve_score > opt$eve_score_low ~ "low",
+		.default = NA)) |> 
 	filter(!is.na(confidence)) |> 
-	arrange(confidence, -eve_score) |> 
-	mutate(eve_id = sprintf("%s_EVE%03d", opt$prefix, row_number())) |> 
-	relocate(eve_id, confidence, eve_score, suggests, because) |> 
-	select(-viral_score, -maybe_score, -retro_score, -false_score)
+        arrange(confidence, -eve_score) |>
+        left_join(s0) |> # contig_id/length
+        mutate(
+            percent_contig = round(eve_length/contig_length * 100, digits=2),
+            eve_id = sprintf("%s_EVE%03d", opt$prefix, row_number())
+        ) |> 
+	relocate(eve_id, confidence, eve_score, suggests, because, locus, eve_length, percent_contig) |> 
+	select(-viral_score, -maybe_score, -retro_score, -false_score, -contig_length, -contig_id)
 
 write_tsv(r2, opt[["out.tsv"]])
 

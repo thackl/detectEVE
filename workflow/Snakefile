@@ -162,11 +162,13 @@ rule taxize_putatEVEs:
         # parse taxid to column, get lineage
         r"""
         perl -pe '($t) = /taxid[ :=](\d+)/i; $t//="1"; s/$/\t$t/;' {input} |
-        taxonkit reformat --data-dir {dbs} -P -I 16 -a -F -f "{{k}};{{K}};{{p}};{{c}};{{o}};{{f}};{{g}};{{s}}" > {output};
+        taxonkit reformat --data-dir {dbs} -P -I 19 -a -F -f "{{k}};{{K}};{{p}};{{c}};{{o}};{{f}};{{g}};{{s}}" > {output};
         """
         
 rule validate_putatEVEs:
-    input: "results/{asm}-retro.bed"
+    input:
+        bed="results/{asm}-retro.bed",
+        fai="genomes/{asm}.fna.seqkit.fai"
     output:
         tsv="results/{asm}-validatEVEs.tsv",
         pdf="results/{asm}-validatEVEs.pdf"
