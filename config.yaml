@@ -2,7 +2,7 @@ db_dir: "databases" # relative to workflow base or absolute
 search:
   # NOTE: with custom databases make sure to set: taxonlist: ""  (empty string)
   db: "rvdb80.dmnd"
-  taxonlist: "--taxonlist 2732396,2731342" # screen only for Orthornaviridae and Monodnaviridae
+  taxonlist: "--taxonlist 2732396,2731342" # screen only for Orthornavirae and Monodnaviridae
   # taxonlist: "" <<< use with custom dbs that haven't been built with a diamond taxonomy !
   evalue: 1e-4
   min_length_nt: 250
