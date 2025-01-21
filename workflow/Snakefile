@@ -78,11 +78,13 @@ rule extract_putatEVEs:
     input:
         bed="results/{asm}-search.bed",
         fna="genomes/{asm}.fna"
-    output: "results/{asm}-putatEVEs-unmasked.fna"
+    output: 
+        fai="genomes/{asm}.fna.seqkit.fai",
+        fna="results/{asm}-putatEVEs-unmasked.fna"
     shell:
         """
         seqkit subseq --bed {input} > {output}
-        if ! [ -s {output} ]; then
+        if ! [ -s {output.fna} ] || ! [ -s {output.fai} ]; then
           echo ""
           echo ""
           echo "#--------------------------------------------------------------------------------------#"
