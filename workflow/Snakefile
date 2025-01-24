@@ -32,6 +32,12 @@ if not config["mask"]["db"]:
 else:
     ruleorder: mask_putatEVEs > skip_mask_putatEVEs
 
+# toggle download of preclustered RVDB vs local clustering
+if not config["setup"]["rvdb-custom-clustering"]:
+    ruleorder: unpack_rvdb_clustered > cluster_rvdb
+else:
+    ruleorder: cluster_rvdb > unpack_rvdb_clustered
+
 
 ## Pseudo-rules
 rule all:
@@ -41,8 +47,7 @@ rule all:
 rule setup:
     input:
         f"{dbs}/uniref50.dmnd",
-        f"{dbs}/rvdb80.dmnd"
-        #f"{dbs}/rvdb80-uniref50.dmnd"
+        f"{dbs}/rvdb-clustered.dmnd"
     
 ## genome download ----------------------------------------------------------##
 rule download_genome:
@@ -245,6 +250,18 @@ rule download_rvdb:
         curl $url/$db -o {output}
         """
 
+rule download_rvdb_clustered:
+    # a bit dirty to prevent mulitple downloads to run at same time
+    threads: workflow.cores * 0.60
+    output: temp("{dbs}/rvdb-clustered.faa.xz"),  # do not mark temp(), could be userspecified location
+    shell:
+        """
+        set +o pipefail;
+        url=https://rvdb-prot.pasteur.fr/
+        db=$(curl -fs $url | grep -oPm1 'files/U-RVDBv[0-9.]+-prot_clustered.fasta.xz')
+        curl $url/$db -o {output}
+        """
+
 ## DEPRECATED - work with NR
 # rule download_nr:
 #     # a bit dirty to prevent mulitple downloads to run at same time
@@ -282,32 +299,44 @@ rule unpack_rvdb:
         # unpack
         xz -cd {input.xz} | seqkit seq -m 60 - | seqkit rmdup -s - | perl -pe 's/^>(acc\|\w+\|)([^|]+)/>$2 $1$2/' > {output.faa}
         """
-        
+
+rule unpack_rvdb_clustered:
+    # a bit dirty to prevent mulitple downloads to run at same time
+    input:
+        xz="{dbs}/rvdb-clustered.faa.xz",
+    output:
+        faa=temp("{dbs}/rvdb-clustered-notax.faa")
+    shell:
+        r"""
+        # unpack
+        xz -cd {input.xz} | seqkit seq -m 60 - | seqkit rmdup -s - | perl -pe 's/^>(acc\|\w+\|)([^|]+)/>$2 $1$2/' > {output.faa}
+        """
+
 # 16GB RAM should suffice: "Approximated maximum memory consumption: 10179M"
 rule cluster_rvdb:
     input:
         "{dbs}/rvdb100.faa"
     output:
-        faa=temp("{dbs}/rvdb80-notax.faa"),
-        cls=temp("{dbs}/rvdb80-notax.faa.clstr"),
+        faa=temp("{dbs}/rvdb-clustered-notax.faa"),
+        cls=temp("{dbs}/rvdb-clustered-notax.faa.clstr"),
     threads: workflow.cores
     shell:
         """
-        cd-hit -c .8 -i {input} -o {output.faa} -M 16000 -T {threads}
+        cd-hit {config[setup][rvdb-custom-clustering]} -i {input} -o {output.faa} -T {threads}
         """
 
 rule prep_rvdb_taxonomy:
     # a bit dirty to prevent mulitple downloads to run at same time
     threads: workflow.cores
     input:
-        faa="{dbs}/rvdb80-notax.faa",
+        faa="{dbs}/rvdb-clustered-notax.faa",
         mapgz="{dbs}/prot.accession2taxid.FULL.gz"
     output:
-        acc=temp("{dbs}/rvdb80-acc.tsv"),
-        tax=temp("{dbs}/rvdb80-acc2tax.tsv"),
-        faa=temp("{dbs}/rvdb80.faa"),
-        taxgz=temp("{dbs}/rvdb80-acc2tax.tsv.gz"),
-        faagz=temp("{dbs}/rvdb80.faa.gz")
+        acc=temp("{dbs}/rvdb-clustered-acc.tsv"),
+        tax=temp("{dbs}/rvdb-clustered-acc2tax.tsv"),
+        faa=temp("{dbs}/rvdb-clustered.faa"),
+        taxgz=temp("{dbs}/rvdb-clustered-acc2tax.tsv.gz"),
+        faagz=temp("{dbs}/rvdb-clustered.faa.gz")
     shell:
         r"""
         grep '^>' {input.faa} | cut -f3 -d'|' > {output.acc} 
@@ -319,12 +348,12 @@ rule prep_rvdb_taxonomy:
 
 rule setup_rvdb:
     input:
-        faagz="{dbs}/rvdb80.faa.gz",
-        mapgz="{dbs}/rvdb80-acc2tax.tsv.gz",
+        faagz="{dbs}/rvdb-clustered.faa.gz",
+        mapgz="{dbs}/rvdb-clustered-acc2tax.tsv.gz",
         nodes="{dbs}/nodes.dmp",
         names="{dbs}/names.dmp"
     output:
-        dmnd="{dbs}/rvdb80.dmnd"
+        dmnd="{dbs}/rvdb-clustered.dmnd"
     shell:
         """
         diamond makedb --no-parse-seqids --in {input.faagz} --db {output.dmnd} --taxonmap {input.mapgz} --taxonnodes {input.nodes} --taxonnames {input.names}
@@ -332,15 +361,15 @@ rule setup_rvdb:
 
 rule setup_retrodb:
     input:
-        rvdb_faagz="{dbs}/rvdb80.faa.gz",
-        rvdb_taxgz="{dbs}/rvdb80-acc2tax.tsv.gz",
+        rvdb_faagz="{dbs}/rvdb-clustered.faa.gz",
+        rvdb_taxgz="{dbs}/rvdb-clustered-acc2tax.tsv.gz",
         uniref_faagz="{dbs}/uniref50.fasta.gz",
         uniref_taxgz="{dbs}/uniref50-acc2tax.tsv.gz",
         nodes="{dbs}/nodes.dmp",
         names="{dbs}/names.dmp"
     output:
-        taxgz=temp("{dbs}/rvdb80-uniref50-acc2tax.tsv.gz"),
-        dmnd="{dbs}/rvdb80-uniref50.dmnd"
+        taxgz=temp("{dbs}/rvdb-clustered-uniref50-acc2tax.tsv.gz"),
+        dmnd="{dbs}/rvdb-clustered-uniref50.dmnd"
     shell:
         """
         cp {input.rvdb_taxgz} {output.taxgz}
