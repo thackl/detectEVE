@@ -88,7 +88,7 @@ rule extract_putatEVEs:
         fna="results/{asm}-putatEVEs-unmasked.fna"
     shell:
         """
-        seqkit subseq --bed {input} > {output}
+        seqkit subseq --bed {input} > {output.fna}
         if ! [ -s {output.fna} ] || ! [ -s {output.fai} ]; then
           echo ""
           echo ""
