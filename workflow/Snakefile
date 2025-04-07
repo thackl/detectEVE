@@ -222,6 +222,14 @@ rule download_ncbi_taxonomy:
     shell:
         "curl https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz -o {output.targz}\n"
         "cd {dbs}/ && tar -xzf taxdump.tar.gz nodes.dmp names.dmp delnodes.dmp merged.dmp"
+        "sed -i 's/domain/superkingdom/g' nodes.dmp"
+        "sed -i 's/domain/superkingdom/g' names.dmp"    
+        "sed -i 's/acellular root/superkingdom/g' names.dmp"
+        "sed -i 's/acellular root/superkingdom/g' nodes.dmp"
+        "sed -i 's/realm/superkingdom/g' nodes.dmp"
+        "sed -i 's/realm/superkingdom/g' names.dmp"
+        "sed -i 's/cellular root/superkingdom/g' names.dmp"
+        "sed -i 's/cellular root/superkingdom/g' nodes.dmp"
 
 rule download_ncbi_acc2tax:
     # a bit dirty to prevent mulitple downloads to run at same time
