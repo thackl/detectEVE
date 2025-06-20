@@ -49,7 +49,7 @@ The pipeline produces the following final files in =results/=:
 ** About
 
 When using the tool in published research, please cite:
-- not yet applicable
+- Brait N, Hackl T and Lequime S (2025) detectEVE: Fast, Sensitive and Precise Detection of Endogenous Viral Elements in Genomic Data. Molecular Ecology Resources e14083 doi: https://doi.org/10.1111/1755-0998.14083
 
 detectEVE is based on the EVE search strategy developed by S. Lequime and
 previously used in the following publications:
