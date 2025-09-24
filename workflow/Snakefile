@@ -169,7 +169,7 @@ rule taxize_putatEVEs:
         # parse taxid to column, get lineage
         r"""
         perl -pe '($t) = /taxid[ :=](\d+)/i; $t//="1"; s/$/\t$t/;' {input} |
-        taxonkit reformat --data-dir {dbs} -P -I 19 -a -F -f "{{k}};{{K}};{{p}};{{c}};{{o}};{{f}};{{g}};{{s}}" > {output};
+        taxonkit reformat --data-dir {dbs} -P -I 19 -a -F -f "{{a}};{{K}};{{p}};{{c}};{{o}};{{f}};{{g}};{{s}}" > {output};
         """
         
 rule validate_putatEVEs:

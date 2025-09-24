@@ -31,7 +31,7 @@ r0 <- read_tsv(opt[["in.bed"]], col_names = cols)
 s0 <- read_tsv(opt[["in.fai"]], col_names = c("contig_id", "contig_length"), col_types="cn---")
 
 # dear king philip came over for good soup though
-tidy_lineage <- function(lng, rank_order=c("d", "k", "K", "p", "c", "o", "f", "g", "s", "t")){
+tidy_lineage <- function(lng, rank_order=c("d", "K", "p", "c", "o", "f", "g", "s", "t")){
 	# str_match_all on NA returns matrix with one row of NA,NA
 	# no match to "" gives empty matrix, which is what we need
 	lng <- lng |> replace_na("") 
@@ -86,20 +86,20 @@ max_count <- function(x){
 r1 <- r0 |> 
 	mutate(
 		tidy_lineage(lineage),
-		tidy_hints(desc, hints, ignore=database=="VDB" | k == "Viruses"),
+		tidy_hints(desc, hints, ignore=database=="VDB" | d == "Viruses"),
 		suggests=coalesce(
 			str_c("viral/", set_na(database, database != "VDB")),
 			str_c("retro/UDB ", set_na(K, str_detect(K, "pararnavir", negate=T))),
-			str_c("viral/UDB ", set_na(k, k != "Viruses")),
+			str_c("viral/UDB ", set_na(d, d != "Viruses")),
 			str_c("false-viral/", false_hints),
 			str_c("retro/", retro_hints),
 			str_c("viral/", viral_hints),
 			str_c("maybe-viral/", maybe_hints, " protein"),
-			str_c("non-viral/annotated protein of ", k)
+			str_c("non-viral/annotated protein of ", d)
 		),
 	) |> 
 	separate(suggests, c("suggests", "because"), sep = "/", extra = "merge") |> 
-	relocate(locus, suggests, bitscore, because, desc, database, k)
+	relocate(locus, suggests, bitscore, because, desc, database, d)
 
 
 r2 <- r1 |> 
@@ -115,12 +115,12 @@ r2 <- r1 |>
                 top_pident = pident[1],
                 # top_coverage = qcovhsp[1],
                 top_desc = desc[1] |> clean_desc(),
-		# top_viral_desc = desc[k == "Viruses"][1] |> clean_desc(),
+		# top_viral_desc = desc[d == "Viruses"][1] |> clean_desc(),
 		top_viral_desc = coalesce(
-			desc[k == "Viruses"][1] |> clean_desc(),
+			desc[d == "Viruses"][1] |> clean_desc(),
 			desc[database =="VDB"][1] |> clean_desc()),
-                top_viral_lineage = lineage[k == "Viruses"][1],
-                top_viral_coverage = round(100*length[k == "Viruses"][1]/slen[k == "Viruses"][1], 2),
+                top_viral_lineage = lineage[d == "Viruses"][1],
+                top_viral_coverage = round(100*length[d == "Viruses"][1]/slen[d == "Viruses"][1], 2),
 		max_count_phylum = max_count(p),
 		suggests = stringify_table(table(suggests)),
                 because = stringify_table(table(because)),
@@ -159,8 +159,8 @@ confidence_colors <- setNames(ifelse(filtered_eves$confidence == "high", "black"
 
 p1 <- ggplot(r3) +
   geom_point(aes(bitscore, eve_id), size=.3, color="black", show.legend = TRUE) +
-  geom_point(aes(bitscore, eve_id, shape=ifelse(k == "Viruses", suggests, NA),
-                 color=ifelse(k == "Viruses" & !str_detect(k, "unclassified"), p, NA)), size=3, alpha=.7) +
+  geom_point(aes(bitscore, eve_id, shape=ifelse(d == "Viruses", suggests, NA),
+                 color=ifelse(d == "Viruses" & !str_detect(d, "unclassified"), p, NA)), size=3, alpha=.7) +
   scale_x_sqrt() + scale_color_brewer("Viral phylum", palette="Dark2", na.translate = FALSE) +
   scale_shape_manual(values = c(16,NA), labels = c("viral", "all")) +
   guides(color = guide_legend(order = 1), shape = guide_legend(order = 2, title = "Taxonomy")) +
